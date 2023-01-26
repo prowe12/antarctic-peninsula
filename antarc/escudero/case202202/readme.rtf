@@ -1,0 +1,77 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2639
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww12940\viewh12140\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 \
+Steps for Analysis:\
+\
+Overall:\
+A) Collect the data and put it in the appropriate directories. Here, within \'91\'85/Sync/measurements/Escudero/\'91\
+1) LWD (Longwave downward radiation): pyranometer/orig_v1; From instrument\
+2) SWD (Shortwave downward radiation): pyrgeometer/orig_v2; From instrument\
+3) sonde: GRAW_radiosondes/simulation/yopp2022_escudero_profiles; From instrument\
+4) ERA5: era5/; From online using get_era5.py; need to set dates in parameter file\
+5) CO2: co2/; See readme_carbontracker.rtf, readme_co2_surface_flask.rtf, readme_co2_noaa_esrl.rtf\
+\
+B) Convert the raw data files into standardized data files, using code in escudero/get_stand_files:  (TODO)\
+1) LWD: lwd_get_stand_files.py, uses antarc.escudero.parameters.lwd_orig_params  (TODO)\
+2) SWD: swd_get_stand_files.py, uses antarc.escudero.parameters.swd_orig_params  (TODO)\
+3) sonde: sonde_raw_to_data_denial_format.py\
+4) ERA5: get_era5_from_web.py\
+5) CO2: These files are left in their original format\
+\
+Longwave:\
+1) Do steps A1 and B1 above for the desired date range.\
+2) get_atm_profs.py: Create atmospheric profiles from radiosondes and ancillary data\
+3) run_radtran.py: with bwn=238, ewn=1500: Do LBLRTM runs to get clear-sky fluxes\
+4) run_radtran.py: with bwn=1500, ewn=2222: Do LBLRTM runs to get clear-sky fluxes\
+5) Manually copy flux files to lw_flux directory.\
+6) Subtract cloudy and clear-sky fluxes to get LW forcing\
+\
+Shortwave:\
+1) get_pyranometer_files.py: Get pyranometer data from .CSV files. \
+2) get_pyranometer_factor.py: Fit to clear sky times to get factor for pyranometer\
+3) broadband_plots.py: Get and plot clear-sky SW fluxes.\
+4) Subtract cloudy and clear-sky fluxes to get SW forcing\
+\
+miniMPL (prep for Robert Stillwell):\
+1) Manual, on PC laptop: Create minute netcdf files\
+2) Manual, on PC laptop: Create netcdf files in Stillwell format\
+3) Manual, on PC laptop: Create after pulse .mpl and .csv files.\
+4) ???: Create atmospheric profiles.\
+5) Manual: Upload to reprocessing directory on Google Drive for Stillwell\
+\
+\
+Sky camera images:\
+- Check out the time period of interest \
+\
+\
+get_atm_profs_KGI.py\
+	Inputs: Station name, date range\
+	Outputs: atmospheric profiles, figures\
+	Calls: get_atm_profs_KGI_rsrc.py, etc\
+	Notes: Not suitable for running DISORT because large temperature diffs are allowed.\
+		Does not currently work for all dates.\
+\
+run_radtran.py: \
+	Inputs: inputs.nml\
+	Outputs: Files with fluxes written to them.\
+	Calls: LBLRTM, etc\
+	Notes: Run multiple cases at once by using different variables \'93proc\'94\
+\
+get_pyranometer_files.py:\
+	Inputs: pyranometer csv files from specified directory\
+	Outputs: pyranometer data in .npz and .txt file\
+	Calls: \'85\
+\
+\
+get_pyranometer_factor.py: \
+\
+Not used (I think):\
+get_era_interim_KGI_RH.py\
+run_radtran_sw_unfinished.py\
+inputs_sw.nml\
+}
