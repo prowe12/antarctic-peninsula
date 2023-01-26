@@ -10,14 +10,10 @@ import pandas as pd  # Add via poetry
 import numpy as np
 import datetime as dt
 
-# import pytz  # Add via poetry
-# from matplotlib import pyplot as plt
-
 
 def plot_broadband(fnames_swd, fnames_lwd, ax1, ax2):
     firsttime = True
     for filename in fnames_swd:
-        # filename = dir_swd + fname
 
         # Read in the csv file for ifile
         df = pd.read_csv(filename, delimiter=",")
@@ -27,12 +23,12 @@ def plot_broadband(fnames_swd, fnames_lwd, ax1, ax2):
 
         # Get rad and samples as float
         rad = np.array([float(x) for x in df["Radiation"]])
-        nsamples = np.array([float(x) for x in df["#Samples"]])
 
         # Index to finite numbers
-        ikeep = np.intersect1d(
-            np.where(np.isfinite(rad))[0], np.where(np.isfinite(nsamples))[0]
-        )
+        # nsamples = np.array([float(x) for x in df["#Samples"]])
+        # ikeep = np.intersect1d(
+        #     np.where(np.isfinite(rad))[0], np.where(np.isfinite(nsamples))[0]
+        # )
 
         # Get the date and add 3 hours because of UTC offset
         mydates = [
@@ -49,7 +45,6 @@ def plot_broadband(fnames_swd, fnames_lwd, ax1, ax2):
     # Add on the longwave
     firsttime = True
     for filename in fnames_lwd:
-        # filename = dir_lwd + fname
 
         # Read in the csv file for ifile
         df = pd.read_csv(filename, delimiter=",")
@@ -59,12 +54,12 @@ def plot_broadband(fnames_swd, fnames_lwd, ax1, ax2):
 
         # Get rad and samples as float
         rad = np.array([float(x) for x in df["Radiation"]])
-        nsamples = np.array([float(x) for x in df["#Samples"]])
 
         # Index to finite numbers
-        ikeep = np.intersect1d(
-            np.where(np.isfinite(rad))[0], np.where(np.isfinite(nsamples))[0]
-        )
+        # nsamples = np.array([float(x) for x in df["#Samples"]])
+        # ikeep = np.intersect1d(
+        #     np.where(np.isfinite(rad))[0], np.where(np.isfinite(nsamples))[0]
+        # )
 
         # Get the date and add 3 hours because of UTC offset
         mydates = [
