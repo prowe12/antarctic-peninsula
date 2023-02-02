@@ -48,7 +48,7 @@ monthstr = str(DATE1.month).zfill(2)
 days = list(range(DATE1.day - 1, DATE2.day + 2))  # pad out a day on each side
 
 c = cdsapi.Client()
-for day in days[1:]:
+for day in days[:1]:
     daystr = str(day).zfill(2)
     outfile = "era5_esc_202202" + daystr + ".nc"
 
