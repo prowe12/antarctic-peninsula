@@ -152,8 +152,11 @@ def get_ozone(dtime) -> float:
     Get the ozone amount based on the current datetime
     @param dtime  The current datetime
     @return  The ozone amount
+    Notes: average given by:
+        (268.5+260.9+240.9+243.3+275.5+256.1)/6
+        2021/02/05 - 2021/02/08 OMI
     """
-    return 257.0
+    return 257.53
 
 
 def get_libradtran(dtimes, outfile) -> np.ndarray:
