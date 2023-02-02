@@ -7,10 +7,6 @@ Created on Mon Aug  1 13:36:00 2022
 """
 
 import cdsapi
-import numpy as np
-
-from antarc.escudero.parameters import esc_params
-from antarc.escudero.parameters import esc202202
 
 
 def get_params(datestr: list[str], times, latlon, press_levs):
@@ -128,7 +124,6 @@ def get_era5(outdir, paramsets, dataset):
     """
     Get the ERA5 data as indicated in params from the web
     """
-    download_flag = True
     c_era = cdsapi.Client()
     for paramset in paramsets:
 
@@ -136,8 +131,7 @@ def get_era5(outdir, paramsets, dataset):
         fid = c_era.retrieve(dataset, paramset["params"])
 
         # download the file and save it to the output directory
-        if download_flag:
-            fid.download(outdir + paramset["outfile"])
+        fid.download(outdir + paramset["outfile"])
 
 
 # LATITUDE = esc_params.LATITUDE
