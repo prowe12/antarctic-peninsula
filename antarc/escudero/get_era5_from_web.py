@@ -12,6 +12,45 @@ import numpy as np
 from antarc.escudero.parameters import esc_params
 from antarc.escudero.parameters import esc202202
 
+
+def get_era5():
+    """
+    Get the ERA5 data as indicated in params from the web
+    """
+    c = cdsapi.Client()
+    for day in days[:1]:
+        daystr = str(day).zfill(2)
+        outfile = "era5_esc_202202" + daystr + ".nc"
+
+        # api parameters:
+        # area: [north, west, south, east]; west is negative
+        params = {
+            "format": "netcdf",
+            "product_type": "reanalysis",
+            "variable": [
+                "pressure",
+                "Geopotential",
+                "Temperature",
+                "Relative humidity",
+                "Ozone mass mixing ratio",
+            ],
+            "pressure_level": press_levs,
+            "year": [yearstr],
+            "month": [monthstr],
+            "day": [daystr],
+            "time": times,
+            "grid": [0.25, 0.25],
+            "area": [north, west, south, east],
+        }
+
+        # retrieve the path to the file
+        fl = c.retrieve(dataset, params)
+
+        # download the file
+        if download_flag:
+            fl.download(outdir + outfile)
+
+
 LATITUDE = esc_params.LATITUDE
 LONGITUDE = esc_params.LONGITUDE
 ALTITUDE = esc_params.ALTITUDE
@@ -47,33 +86,4 @@ yearstr = str(DATE1.year)
 monthstr = str(DATE1.month).zfill(2)
 days = list(range(DATE1.day - 1, DATE2.day + 2))  # pad out a day on each side
 
-c = cdsapi.Client()
-for day in days[:1]:
-    daystr = str(day).zfill(2)
-    outfile = "era5_esc_202202" + daystr + ".nc"
-
-    # api parameters:
-    # area: [north, west, south, east]; west is negative
-    params = {
-        "format": "netcdf",
-        "product_type": "reanalysis",
-        "variable": [
-            "pressure",
-            "Geopotential",
-            "Temperature",
-            "Relative humidity",
-            "Ozone mass mixing ratio",
-        ],
-        "pressure_level": press_levs,
-        "year": [yearstr],
-        "month": [monthstr],
-        "day": [daystr],
-        "time": times,
-        "grid": [0.25, 0.25],
-        "area": [north, west, south, east],
-    }
-    # retrieves the path to the file
-    fl = c.retrieve(dataset, params)
-    # download the file
-    if download_flag:
-        fl.download(outdir + outfile)
+get_era5()
