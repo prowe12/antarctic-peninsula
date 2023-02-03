@@ -10,7 +10,7 @@ import numpy as np
 
 from antarc.escudero.parameters import esc_params
 from antarc.escudero.parameters import esc202202
-from antarc.escudero.get_era5_from_web import get_paramsets, get_era5
+from antarc.get_era5_from_web import get_paramsets, get_era5
 
 
 LATITUDE = esc_params.LATITUDE
