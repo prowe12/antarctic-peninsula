@@ -11,10 +11,7 @@ import datetime as dt
 import numpy as np
 import os
 
-# My modules
-from antarc.escudero.sonde_raw_to_data_denial_format import (
-    graw_raw_to_datadenial,
-)
+from antarc.sonde_raw_to_data_denial_format import graw_raw_to_datadenial
 from antarc.get_atm_profs_rsrc import Sonde
 
 
@@ -22,6 +19,7 @@ indir = "tests/testdata/Escudero_graw_upp_raw/"
 outdir = "tests/temp/"
 testdatadir = "tests/testdata/Escudero_data_denial_format/"
 sample_file = "20220205120020060702_UPP_RAW_89056_2022020512.txt"
+
 
 graw_raw_to_datadenial(
     indir, outdir, sample_file, "Escudero", -62.2014, -58.9622, 60.0
@@ -34,8 +32,10 @@ sondefiles = [
     "Escudero_2022020800.txt",
     "Escudero_2022020823.txt",
 ]
+sondefilefmt = "Escudero_%Y%m%d%H.txt"
+
 for sondefile in sondefiles:
-    sondedate = dt.datetime(2022, 2, 7, 12, 0, 0)
+    sondedate = dt.datetime.strptime(sondefile, sondefilefmt)
     newsonde = Sonde(outdir, sondefile, sondedate)
 
     correctsonde = Sonde(testdatadir, sondefile, sondedate)
