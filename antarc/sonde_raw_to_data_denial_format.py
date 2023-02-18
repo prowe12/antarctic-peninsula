@@ -211,8 +211,10 @@ def graw_raw_to_datadenial(
     # Log file
     logfile = "log.txt"
     lid = open(output_dir + logfile, "w")
+    firstdatestr = "notset"
+    datestr = "notset"
     firsttime = True
-    for input_file in input_files[55:]:
+    for input_file in input_files:
 
         # Read in the file data
         with open(input_dir + input_file, encoding="ISO-8859-1") as fin:
@@ -305,7 +307,7 @@ def graw_raw_to_datadenial(
         hourstr = f"{launchhour:02}"
         timestr = hourstr + ":" + f"{launchmin:02}" + ":" + f"{launchsec:02}"
 
-        output_file = location + datestr + hourstr + ".txt"
+        output_file = location + "_" + datestr + hourstr + ".txt"
         start_time_s = launchhour * 3600 + launchmin * 60 + launchsec
 
         logmsg = genmsg + f"; Date: {datestr} {timestr}; Output: {output_file}"
