@@ -23,5 +23,5 @@ samplefile = sonde_params.SAMPLEFNAME
 prefix = sonde_params.PREFIX_FOR_STANDFILE
 
 # Run
-for indir in sonde_params.ORIG_DIRS[2:3]:
+for indir in sonde_params.ORIG_DIRS:
     graw_raw_to_datadenial(indir, outdir, samplefile, prefix, lat, lon, height)
