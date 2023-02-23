@@ -118,7 +118,7 @@ class Sonde:
         wind = np.flipud(wind)
 
         itrp = self.find_tropopause()
-        self.plot_snd_and_pwrf(temp, rh, wind, itrp)
+        # self.plot_snd_and_pwrf(temp, rh, wind, itrp)
 
         tdiff, rhdiff, wnddiff = self.get_trop_diffs(temp, rh, wind, itrp)
         return tdiff, rhdiff, wnddiff
@@ -213,7 +213,7 @@ class DenialSondePR(Sonde):
         self.lev = snd["P"]
         self.rh = snd["RH"]
         self.wspeed = snd["Speed"]  # speed in knots
-        self.height = snd["HeightMSL"]
+        self.height = snd["HeightMSL"].copy()
 
         # convert wind speed knots -> m/s
         self.wspeed = self.wspeed * 0.5144444444
@@ -223,9 +223,17 @@ class DenialSondePR(Sonde):
 
 
 def get_diffs(val1, val2, itrp):
-    max_diff = max(val1[:itrp] - val2[:itrp])
-    min_diff = min(val1[:itrp] - val2[:itrp])
-    mean_diff = np.mean(val1[:itrp] - val2[:itrp])
-    rms_diff = np.sqrt(np.mean((val1[:itrp] - val2[:itrp]) ** 2))
-
-    return [max_diff, min_diff, mean_diff, rms_diff]
+    """
+    Get difference stats between two profiles, which are functions of
+    altitude or pressure, up to the troposphere
+    @params val1  The first profile
+    @params val2  The second profile
+    @params itrp  Index to the tropopause
+    @returns  Dictionary with difference stats (max, min, mean, rms)
+    """
+    return {
+        "max": max(val1[:itrp] - val2[:itrp]),
+        "min": min(val1[:itrp] - val2[:itrp]),
+        "mean": np.mean(val1[:itrp] - val2[:itrp]),
+        "rms": np.sqrt(np.mean((val1[:itrp] - val2[:itrp]) ** 2)),
+    }
