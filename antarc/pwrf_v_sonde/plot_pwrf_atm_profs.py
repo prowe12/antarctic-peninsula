@@ -40,7 +40,7 @@ pwrf_date_fmts = [
     "%Y%m%d_09",
 ]
 
-idate = 4
+idate = 2
 pwrfdir = main_dir + pwrfdirs[idate]
 pwrf_date_fmt = pwrf_date_fmts[idate]
 pwrf_date = pwrf_dates[idate]
@@ -255,19 +255,29 @@ ax1.set_yticks(
 
 print()
 print(upwnd_snd_file)
-for x in upwnd_dtemp:
-    print(x)
-for x in upwnd_drh:
-    print(x)
-for x in upwnd_dwind:
-    print(x)
+print(f'Max: {max(abs(upwnd_dtemp["max"]),abs(upwnd_dtemp["min"]))}')
+print(f"Mean: {upwnd_dtemp['mean']}")
+print(f"RMS: {upwnd_dtemp['rms']}")
+
+print(upwnd_dwind["max"])
+print(upwnd_dwind["min"])
+print(upwnd_dwind["rms"])
+
+print(f'Max RH: {max(abs(upwnd_drh["max"]),abs(upwnd_drh["min"]))}')
+print(f"Mean RH: {upwnd_drh['mean']}")
+print(f'RMS RH: {upwnd_drh["rms"]}')
 
 
 print()
 print(mbio_snd_file)
-for x in mbio_dtemp:
-    print(x)
-for x in mbio_drh:
-    print(x)
-for x in mbio_dwind:
-    print(x)
+print(mbio_dtemp["max"])
+print(mbio_dtemp["min"])
+print(mbio_dtemp["rms"])
+
+print(mbio_dwind["max"])
+print(mbio_dwind["min"])
+print(mbio_dwind["rms"])
+
+print(mbio_drh["max"])
+print(mbio_drh["min"])
+print(mbio_drh["rms"])
