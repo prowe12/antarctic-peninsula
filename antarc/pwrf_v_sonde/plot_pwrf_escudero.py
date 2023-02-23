@@ -18,8 +18,8 @@ from load_sonde import DenialSondePR
 meas_dir = "/Users/prowe/Sync/measurements/"
 main_dir = "/Users/prowe/Sync/projects/NSF_AP/case_studies/"
 
-idate = 3  # 0 2 4 6
-year = 2022
+idate = 0  # 0 2 4 6
+year = 2018
 dhour = 1.0
 
 if year == 2018:
@@ -186,19 +186,34 @@ ax1.set_yticks(
 print()
 print(esc_snd_file1)
 print()
-for x in esc1_dtemp:
-    print(x)
-for x in esc1_drh:
-    print(x)
-for x in esc1_dwind:
-    print(x)
+print(f'Max: {max(abs(esc1_drh["max"]),abs(esc1_drh["min"]))}')
+print(f'Mean: {esc1_drh["mean"]}')
+print(f'RMS: {esc1_drh["rms"]}')
+
 
 print()
 print(esc_snd_file2)
 print()
-for x in esc2_dtemp:
-    print(x)
-for x in esc2_drh:
-    print(x)
-for x in esc2_dwind:
-    print(x)
+print(f'Max: {max(abs(esc2_drh["max"]),abs(esc2_drh["min"]))}')
+print(f'Mean: {esc2_drh["mean"]}')
+print(f'RMS: {esc2_drh["rms"]}')
+
+# print()
+# print(esc_snd_file1)
+# print()
+# for x in esc1_dtemp:
+#     print(x)
+# for x in esc1_drh:
+#     print(x)
+# for x in esc1_dwind:
+#     print(x)
+
+# print()
+# print(esc_snd_file2)
+# print()
+# for x in esc2_dtemp:
+#     print(x)
+# for x in esc2_drh:
+#     print(x)
+# for x in esc2_dwind:
+#     print(x)
