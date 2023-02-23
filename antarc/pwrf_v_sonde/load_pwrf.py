@@ -107,8 +107,8 @@ class Pwrf:
     def trim(self, sndlev):
         """Trim the PWRF data outside the sonde bounds"""
 
-        if sndlev[0] > self.level[0]:
-            print("first pwrf point missing")
+        # if sndlev[0] > self.level[0]:
+        #     print("first pwrf point missing")
 
         ikeep = np.where(
             np.logical_and(
