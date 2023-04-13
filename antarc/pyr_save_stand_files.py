@@ -8,7 +8,7 @@ Created on Fri Jul  1 11:24:36 2022
 
 import datetime as dt
 
-from antarc.pyr_get_stand_files_from_orig import (
+from antarc.get_pyr_stand_files_from_orig import (
     StandFilesFromOrigV1,
     StandFilesFromOrigV2,
     LwdStandFilesFromOrigV1,
