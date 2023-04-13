@@ -70,8 +70,7 @@ def get_paramsets(
     """
 
     paramsets = []
-    # TODO: remove [:1] below
-    for day in days[:1]:
+    for day in days:
 
         paramset = get_paramset(
             prefix,
