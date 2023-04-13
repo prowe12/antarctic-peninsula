@@ -30,6 +30,21 @@ def get_filenames(direc: str, fmt: str) -> list:
     @param fmt  Format of desired files from direc
     @return  A list of file names
     """
+    matchlen = fmt.find("%Y")
+    match = fmt[:matchlen]
+    files = np.sort(os.listdir(direc))
+    samplefile = dt.datetime.now().strftime(fmt)
+    flen = len(samplefile)
+    return [x for x in files if len(x) == flen and x[:matchlen] == match]
+
+
+def get_filenames_3(direc: str, fmt: str) -> list:
+    """
+    Get all filenames having the specified length and prefix
+    @param direc  Desired directory to get file names from
+    @param fmt  Format of desired files from direc
+    @return  A list of file names
+    """
     files = np.sort(os.listdir(direc))
     samplefile = dt.datetime.now().strftime(fmt)
     flen = len(samplefile)
