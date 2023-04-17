@@ -99,14 +99,18 @@ from antarc.get_atm_profs_rsrc import (
 # from get_atm_profs_KGI_rsrc import get_surface_T
 
 # Parameter modules
-from antarc.escudero.parameters import esc_params, esc202202, atm_prof_params
+from antarc.escudero.parameters import esc_params, atm_prof_params
+from antarc.escudero.parameters import esc202202 as esc_case
+
+
+start_date = esc_case.DATE1
+end_date = esc_case.DATE2
+
 
 lat = esc_params.LATITUDE
 lon = esc_params.LONGITUDE
 alt_surf = esc_params.ALTITUDE
 location = esc_params.LOCATION
-start_date = esc202202.DATE1
-end_date = esc202202.DATE2
 layerbnds_in = atm_prof_params.LAYERBNDS
 model_extra = atm_prof_params.MODEL_EXTRA
 sonde_dir = atm_prof_params.SONDE_DIR
