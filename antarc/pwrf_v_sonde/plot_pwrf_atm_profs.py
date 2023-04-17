@@ -40,7 +40,7 @@ pwrf_date_fmts = [
     "%Y%m%d_09",
 ]
 
-idate = 2
+idate = 4
 pwrfdir = main_dir + pwrfdirs[idate]
 pwrf_date_fmt = pwrf_date_fmts[idate]
 pwrf_date = pwrf_dates[idate]
@@ -51,21 +51,21 @@ upwnd_dirs = [
     meas_dir + "Rothera/radiosonde/",
     meas_dir + "Rothera/igra/derived/",
     meas_dir + "Rothera/igra/derived/",
-    meas_dir + "Escudero/radiosondes/datadenial/",
+    meas_dir + "Escudero/radiosondes/datadenial/v0/",
 ]
 upwnd_snd_files = [
     "Rothera_2018120511.dat",
     "Rothera_2018120611.dat",
     "Rothera_igra_20181207_12.txt",
     "Rothera_igra_20220209_12.txt",
-    "esc_sonde_dd_2022020823.txt",
+    "esc_sonde_dd_v0_2022020823.txt",
 ]
 upwnd_sndfile_fmts = [
     "Rothera_%Y%m%d%H.dat",
     "Rothera_%Y%m%d%H.dat",
     "Rothera_igra_%Y%m%d_%H.txt",
     "Rothera_igra_%Y%m%d_%H.txt",
-    "esc_sonde_dd_%Y%m%d%H.txt",
+    "esc_sonde_dd_v0_%Y%m%d%H.txt",
 ]
 upwnd_date_strs = [
     "2018/12/05 12 UT",
