@@ -68,20 +68,15 @@ Variables:
      model_extra
  - For other classes and variables, see get_atm_prof_KGI_rsrc
 
-
-
-
-
-
 """
 
 # Dependencies
-import numpy as np
-import matplotlib.pyplot as plt
 import pickle
 import copy
 import datetime as dt
 import bisect
+import matplotlib.pyplot as plt
+import numpy as np
 
 
 # My modules
@@ -106,7 +101,6 @@ from antarc.escudero.parameters import esc202202 as esc_case
 start_date = esc_case.DATE1
 end_date = esc_case.DATE2
 
-
 lat = esc_params.LATITUDE
 lon = esc_params.LONGITUDE
 alt_surf = esc_params.ALTITUDE
@@ -125,15 +119,10 @@ out_dir = atm_prof_params.OUT_DIR
 fig_dir = atm_prof_params.FIG_DIR
 
 
-# Set up directories, files, etc
-# sonde_file = location + "_2018113023.txt"
-id1 = len(location) + 1
-id2 = len(location) + 1 + 10
-
 # Flags. The created profiles are always saved. These flags set whether to
 # also plot and save figures and pickled results.
-plot_figs = True  # Flag specifiying whether to plot and save figures
-pickle_it = False  # Flag specifying whether to pickle results
+PLOT_FIGS = True  # Flag specifiying whether to plot and save figures
+PICKLE_IT = False  # Flag specifying whether to pickle results
 
 
 # # # # # # #     START MAIN CODE     # # # # # # #
@@ -163,8 +152,13 @@ end_ord = dt.datetime.toordinal(end_date)
 ndates = len(sonde_file_n_dates)
 ords = [dt.datetime.toordinal(sonde_file_n_dates[i][1]) for i in range(ndates)]
 
-ibeg = bisect.bisect(ords, start_ord) - 1  # ords.index(start_ord)
-iend = bisect.bisect(ords, end_ord)  # ords.index(end_ord)
+# QC date range of sondes
+if start_ord < ords[0] or end_ord > ords[-1]:
+    raise ValueError("sondes missing for the desired date range")
+
+# Get indices for date range
+ibeg = max(bisect.bisect_right(ords, start_ord) - 1, 0)
+iend = bisect.bisect_left(ords, end_ord)  # ords.index(end_ord)
 
 # Loop over radiosounding files, set profile, and save as netcdf file
 # For debugging, remove loop and use:
@@ -172,6 +166,7 @@ for sonde_file, sonde_date in sonde_file_n_dates[ibeg : iend + 1]:
 
     print("Working on", sonde_file)
     sonde = Sonde(sonde_dir, sonde_file, sonde_date)
+    sonde.qc()
 
     # Use the lowest sonde height as the surface height
     layerbnds = np.array(layerbnds_in)
@@ -182,6 +177,7 @@ for sonde_file, sonde_date in sonde_file_n_dates[ibeg : iend + 1]:
     lastdate = ctFiles.dates[-1]
     if date_for_ct < ctFiles.dates[0]:
         raise ValueError("No useable CarbonTracker data found.")
+
     while date_for_ct > lastdate and (date_for_ct - lastdate).days > 30:
         if date_for_ct < ctFiles.dates[0]:
             raise ValueError("No useable CarbonTracker data found.")
@@ -193,7 +189,8 @@ for sonde_file, sonde_date in sonde_file_n_dates[ibeg : iend + 1]:
         )
     # Get the nearest date
     ddate = [x - date_for_ct for x in ctFiles.dates]
-    idate = ddate.index(np.min(np.abs(ddate)))
+    idate = np.argmin(np.abs(ddate))
+    # idate = ddate.index(np.min(np.abs(ddate)))
 
     ctracker = CarbonTracker(ctFiles, date_for_ct, lat, lon)
     co2_surf = get_co2(sonde.date, lat, co2_drake, co2_palmer)
@@ -208,7 +205,7 @@ for sonde_file, sonde_date in sonde_file_n_dates[ibeg : iend + 1]:
     prof.set_upper("T", ctracker)  # Upmost T from carbonTracker
     prof.set_upper_spline("P", era)  # Upper P from ERA-Interim
     prof.h2o[prof.z >= 11.5] = 4.0  # Upmost H2o = 4 ppm
-    if plot_figs:
+    if PLOT_FIGS:
         profo = copy.deepcopy(prof)  # For plotting figures
     # prof.set_surf_T(surfmetFiles, sonde.date)   # Set surface temperatures
     prof.model_extra = model_extra  # model for other molecs
@@ -217,12 +214,12 @@ for sonde_file, sonde_date in sonde_file_n_dates[ibeg : iend + 1]:
 
     # Save the output as netcdf file (optional pickle file too)
     fname = out_dir + "prof" + prof.date.strftime("%Y%m%d_%H%m")
-    if pickle_it:
+    if PICKLE_IT:
         pickle.dump(prof, open(fname + ".pickle", "wb"))
     prof.write_to_netcdf_file(fname + ".nc")
 
-    # .. If specified, plot the results
-    if plot_figs:
+    # If specified, plot the results
+    if PLOT_FIGS:
         # zmet, Tmet = get_surface_T(surfmetFiles, sonde.date)
 
         # .. Make figures showing results
@@ -310,41 +307,9 @@ for sonde_file, sonde_date in sonde_file_n_dates[ibeg : iend + 1]:
         maxT = np.max(
             [np.max(era.T[era.z < 1.4]), np.max(sonde.T[sonde.z < 1.4])]
         )
-        plt.axis(
-            [
-                np.floor(np.min(prof.T[prof.z < 1.4] - 2)),
-                np.ceil(maxT) + 2,
-                -0.2,
-                1.4,
-            ]
-        )
+        xmin = np.floor(np.min(prof.T[prof.z < 1.4] - 2))
+        plt.axis([xmin, np.ceil(maxT) + 2, -0.2, 1.4])
 
         figname = "Tlow" + prof.date.strftime("%Y%m%d_%H%m") + ".png"
         plt.pause(1)
         plt.savefig(fig_dir + figname)
-
-
-"""
-# .. Number of levels and indices to lat, lon, and time
-ilat = np.interp(lat, nc['latitude'][:], np.arange(nc['latitude'].shape[0]))
-ilon = np.interp(lon, nc['longitude'][:], np.arange(nc['longitude'].shape[0]))
-dd = [d-sonde.date for d in dates]
-dday = [d.days + d.seconds/60/60/24 for d in dd]
-it = np.interp(0, dday, np.arange(Ntimes))
-
-# .. As arrays
-ilevs = np.arange(Nlevel)
-ibnds = np.arange(Nbound)
-ilatL = ilat * np.ones(Nlevel)
-ilonL = ilon * np.ones(Nlevel)
-itimeL = it * np.ones(Nlevel)
-ilatB = ilat * np.ones(Nbound)
-ilonB = ilon * np.ones(Nbound)
-itimeB = it * np.ones(Nbound)
-
-# .. Interpolate to the lat/lon of McMurdo for all times
-co2b = ndimage.map_coordinates(co2mat, [[itimeL],[ilevs],[ilatL],[ilonL]])[0]
-Tb = ndimage.map_coordinates(Tmat, [[itimeL],[ilevs],[ilatL],[ilonL]])[0]
-Pb = ndimage.map_coordinates(Pmat, [[itimeB],[ibnds],[ilatB],[ilonB]])[0]/100
-zb = ndimage.map_coordinates(zmat, [[itimeB],[ibnds],[ilatB],[ilonB]])[0]/1000
-"""
