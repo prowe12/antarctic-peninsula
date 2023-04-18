@@ -166,7 +166,7 @@ for sonde_file, sonde_date in sonde_file_n_dates[ibeg : iend + 1]:
 
     print("Working on", sonde_file)
     sonde = Sonde(sonde_dir, sonde_file, sonde_date)
-    sonde.qc()
+    sonde.quality_control()
 
     # Use the lowest sonde height as the surface height
     layerbnds = np.array(layerbnds_in)
