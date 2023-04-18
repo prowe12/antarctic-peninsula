@@ -17,7 +17,7 @@ FIG_DIR = "/Users/prowe/Sync/measurements/Escudero/profiles//figures/"
 surfmet_dir = main_dir + "met/"
 
 # Filenames and formats
-SONDE_FILEFORMAT = "esc_sonde_dd_%Y%m%d%H.txt"
+SONDE_FILEFORMAT = "esc_sonde_dd_v1_%Y%m%d%H.txt"
 # CT_FILEFORMAT = "CT-NRT.v2022-1.molefrac_glb3x2_%Y-%m-%d.nc"
 CT_FILEFORMAT = "CT-NRT.v2023-2.molefrac_glb3x2_%Y-%m-%d.nc"
 ERA_FILEFORMAT = "era5_esc_%Y%m%d.nc"
