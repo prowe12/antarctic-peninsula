@@ -19,4 +19,5 @@ ORIG_DIRS = (
 SAMPLEFNAME = "20220401120020047677_UPP_RAW_89056_2022040112.txt"
 
 STAND_DIR = "/Users/prowe/Sync/measurements/Escudero/radiosondes/datadenial/"
-PREFIX_FOR_STANDFILE = "esc_sonde_dd"
+NO_QC_DIR = STAND_DIR + "noQC/"
+PREFIX_FOR_STANDFILE = "esc_sonde_dd_v1"
