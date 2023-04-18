@@ -125,41 +125,60 @@ class Sonde:
                 + float(sonde[colnames["time"]][i][6:9]) / 60 / 60
             )
 
-        # Fix any missing heights - MUST USE HYPSOMETRIC
-        # BECAUSE SOME VALUES DECREASE !!!!
-        P = sonde[colnames["press"]].values
-        T = sonde[colnames["temp"]].values + 273.15
-        z = sonde[colnames["height"]].values
+        press = sonde[colnames["press"]].values
+        temper = sonde[colnames["temp"]].values + 273.15
+        alt = sonde[colnames["height"]].values
         rh = sonde[colnames["rh"]].values
 
         # import matplotlib.pyplot as plt
         # plt.figure()
-        # plt.plot(T,z)
-
-        imissing = np.where(z == -999)[0]
-        if np.any(imissing):
-            z0 = z[imissing[0] - 1]
-            zfill = hypsometric_for_z(
-                P[imissing], T[imissing], rh[imissing], z0
-            )
-            z[imissing] = zfill
-            # plt.plot(T,z)
+        # plt.plot(temper,alt)
 
         self.time = hours  # nc.variables['time'][:] + 0
-        self.T = T  #
-        self.P = P
+        self.T = temper  #
+        self.P = press
         self.rh = rh
-        self.z = z / 1000
+        self.z = alt / 1000
 
         # Convert the rh to ppmv
         self.h2o = humidRS80(self.rh, self.T, "rhw", "ppmv", self.P)
 
-        # Interpolate everything onto z grid
+        # Interpolate everything onto alt grid
         self.file = sonde_file
         yymmdd = datetime(sonde_date.year, sonde_date.month, sonde_date.day)
-        self.date = yymmdd + timedelta(
-            self.time[0] / 24
-        )  # timedelta()/60/60/24)
+        self.date = yymmdd + timedelta(self.time[0] / 24)
+        # timedelta()/60/60/24)
+
+    def qc(self):
+        """Quality control"""
+        if any(np.diff(self.P) >= 0):
+            raise ValueError("One or more pressures increase with altitude")
+
+        if any(np.diff(self.z) <= 0):
+            raise ValueError("One or more altitudes decrease with time")
+
+        if (
+            any(np.isnan(self.time))
+            or any(np.isnan(self.z))
+            or any(np.isnan(self.T))
+            or any(np.isnan(self.P))
+            or any(np.isnan(self.h2o))
+            or any(np.isnan(self.rh))
+        ):
+            raise ValueError("One or more values is nan")
+            # "file", "date", "time", "z", "T", "P", "rh", "h2o")
+
+        # Fix any missing heights - MUST USE hypsometric_for_z
+        # BECAUSE SOME VALUES DECREASE !!!!
+        imissing = np.where(self.z == -999)[0]
+        if np.any(imissing):
+            raise ValueError("This should not happen; see code")
+            # alt0 = self.z[imissing[0] - 1]
+            # zfill = hypsometric_for_z(
+            #     self.P[imissing], self.T[imissing], self.rh[imissing], alt0
+            # )
+            # self.z[imissing] = zfill
+            # plt.plot(temper,alt)
 
 
 # # # # # # #     Station flask CO2     # # # # # # #
