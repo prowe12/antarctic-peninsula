@@ -6,33 +6,33 @@ Created on Mon Dec 17 14:40:05 2018
 @author: prowe
 """
 
-# .. Built-in modules
-import scipy.io.netcdf as netcdf
-import numpy as np
-from netCDF4 import Dataset
-from netCDF4 import num2date, date2num, date2index
-import scipy.ndimage as ndimage
-import os
-import sys
+# Built-in modules
+import calendar
 from datetime import datetime, timedelta
 from bisect import bisect, bisect_right
-from scipy import interpolate
 import time
 import datetime as dt
-import xarray as xr
-
-from matplotlib.dates import datestr2num
 import pandas as pd
+from scipy import interpolate
+import scipy.ndimage as ndimage
+import matplotlib.pyplot as plt
+from netCDF4 import Dataset, num2date, date2num, date2index
+import numpy as np
 
 
 # My modules
 from antarc.humidRS80 import humidRS80
-from antarc.hypsometric import hypsometric, hypsometric_for_z
+from antarc.hypsometric import hypsometric
 from antarc.getfilenames import get_filenames_dates
 
 
 # # # # # # #     Get file names     # # # # # # #
 class FileInfo:
+    """
+    Get files within a directory with a given format,
+    and get the dates using the format
+    """
+
     __slots__ = ("dir", "files", "dates")
 
     def __init__(self, direc: str, fmt: str):
@@ -46,35 +46,22 @@ class FileInfo:
         # dates = list(map(lambda f: datetime.strptime(f[i1:i2], fstr), files))
 
 
-class HMS_to_hours:
-    def __init__(self, default=float("nan")):
-        # self.first = None
-        self.default = default
-
-    def __call__(self, value):
-        value = value.decode("ascii", "ignore").strip()
-        if not value:  # no value
-            return self.default
-        try:  # specify input format here
-            current = datetime.strptime(value, "%H:%M:%S")
-        except ValueError:  # can't parse the value
-            return self.default
-        else:
-            return current
-            # if self.first is not None:
-            #    return (current - self.first).total_seconds()
-            # else:
-            #    self.first = current
-            #    return 0.0
-
-
 # # # # # # #     Radiosonde     # # # # # # #
 class Sonde:
+    """
+    Class for radiosonde data from 'data denial' format
+    """
+
     __slots__ = ("file", "date", "time", "z", "T", "P", "rh", "h2o")
 
     def __init__(
         self, sonde_dir: str, sonde_file: str, sonde_date: dt.datetime
     ):
+        """Read in a radiosounding saved in data denial format
+        @param sonde_dir  The directory with the soundings
+        @param sonde_file  The desired file
+        @param sonde_date  The corresponding datetime
+        """
 
         file = sonde_dir + sonde_file
         sonde = pd.read_csv(
@@ -134,8 +121,8 @@ class Sonde:
         # plt.figure()
         # plt.plot(temper,alt)
 
-        self.time = hours  # nc.variables['time'][:] + 0
-        self.T = temper  #
+        self.time = hours  # nci.variables['time'][:] + 0
+        self.T = temper
         self.P = press
         self.rh = rh
         self.z = alt / 1000
@@ -149,8 +136,8 @@ class Sonde:
         self.date = yymmdd + timedelta(self.time[0] / 24)
         # timedelta()/60/60/24)
 
-    def qc(self):
-        """Quality control"""
+    def quality_control(self):
+        """Implement quality control on sonde data"""
         if any(np.diff(self.P) >= 0):
             raise ValueError("One or more pressures increase with altitude")
 
@@ -183,8 +170,10 @@ class Sonde:
 
 # # # # # # #     Station flask CO2     # # # # # # #
 
-# .. Load station co2
+
 class CO2stationData:
+    """Load CO2 data measured at the surface at stations"""
+
     __slots__ = ["date", "co2", "lat", "lon", "alt"]
 
     def __init__(self, co2_file):
@@ -237,6 +226,10 @@ class CO2stationData:
 
 
 class CarbonTracker:
+    """
+    Load global carbon tracker data for a given date, latitude and longitude
+    """
+
     __slots__ = ("co2", "T", "P", "zbnd", "z", "rh")
 
     def __init__(self, co2Files, date, lat, lon):
@@ -250,48 +243,48 @@ class CarbonTracker:
 
         # Sometimes the "before" date is actually slightly after
         # the first date in the file. In this case, decrease ibef and iaft
-        with Dataset(co2Files.dir + co2Files.files[ibef], "r") as nc:
+        with Dataset(co2Files.dir + co2Files.files[ibef], "r") as nci:
             dates = num2date(
-                nc.variables["time"][:], nc.variables["time"].units
+                nci.variables["time"][:], nci.variables["time"].units
             )
         if min(dates) > date:
             ibef -= 1
             iaft -= 1
 
         # .. Open the netcdf co2 file and get the data
-        with Dataset(co2Files.dir + co2Files.files[ibef], "r") as nc:
+        with Dataset(co2Files.dir + co2Files.files[ibef], "r") as nci:
             """
-            # nc['co2'].shape
+            # nci['co2'].shape
             # Out[32]: (8,    25,   90, 120)
             #         time, level, lat, lon
             """
-            Nlevel = nc["level"].shape[0]
-            Nbound = nc["boundary"][:].shape[0]
-            lats = nc["latitude"][:]
-            lons = nc["longitude"][:]
+            nlev = nci["level"].shape[0]
+            nbound = nci["boundary"][:].shape[0]
+            lats = nci["latitude"][:]
+            lons = nci["longitude"][:]
             dates = num2date(
-                nc.variables["time"][:], nc.variables["time"].units
+                nci.variables["time"][:], nci.variables["time"].units
             )
 
             """
             # Verify it worked
-            print('units = %s, values = %s' % (nc.variables['time'].units, 
-                                               nc.variables['time'][:]))
-            print(nc['time_components'][:])
+            print('units = %s, values = %s' % (nci.variables['time'].units, 
+                                               nci.variables['time'][:]))
+            print(nci['time_components'][:])
             print(dates)
             print([date.strftime('%Y-%m-%d %H:%M:%S') for date in dates])
             """
 
             if max(dates) < date:
                 # Glom on the last with the first
-                co2mat = np.zeros((2, Nlevel, 90, 120))
-                Tmat = np.zeros((2, Nlevel, 90, 120))
-                Pmat = np.zeros((2, Nbound, 90, 120))
-                zmat = np.zeros((2, Nbound, 90, 120))
-                co2mat[0, :, :, :] = nc["co2"][-1, :, :, :]
-                Tmat[0, :, :, :] = nc["temperature"][-1, :, :, :]
-                Pmat[0, :, :, :] = nc["pressure"][-1, :, :, :]
-                zmat[0, :, :, :] = nc["gph"][-1, :, :, :]
+                co2mat = np.zeros((2, nlev, 90, 120))
+                tmat = np.zeros((2, nlev, 90, 120))
+                pmat = np.zeros((2, nbound, 90, 120))
+                zmat = np.zeros((2, nbound, 90, 120))
+                co2mat[0, :, :, :] = nci["co2"][-1, :, :, :]
+                tmat[0, :, :, :] = nci["temperature"][-1, :, :, :]
+                pmat[0, :, :, :] = nci["pressure"][-1, :, :, :]
+                zmat[0, :, :, :] = nci["gph"][-1, :, :, :]
 
                 with Dataset(
                     co2Files.dir + co2Files.files[iaft], "r"
@@ -305,42 +298,46 @@ class CarbonTracker:
 
                     # Glom on the last with the first
                     co2mat[1, :, :, :] = nc_aft["co2"][0, :, :, :]
-                    Tmat[1, :, :, :] = nc_aft["temperature"][0, :, :, :]
-                    Pmat[1, :, :, :] = nc_aft["pressure"][0, :, :, :]
+                    tmat[1, :, :, :] = nc_aft["temperature"][0, :, :, :]
+                    pmat[1, :, :, :] = nc_aft["pressure"][0, :, :, :]
                     zmat[1, :, :, :] = nc_aft["gph"][0, :, :, :]
 
                     co2 = map_interp(co2mat, date, lat, lon, dates, lats, lons)
-                    T = map_interp(Tmat, date, lat, lon, dates, lats, lons)
-                    P = map_interp(Pmat, date, lat, lon, dates, lats, lons)
-                    z = map_interp(zmat, date, lat, lon, dates, lats, lons)
+                    temp = map_interp(tmat, date, lat, lon, dates, lats, lons)
+                    press = map_interp(pmat, date, lat, lon, dates, lats, lons)
+                    alt = map_interp(zmat, date, lat, lon, dates, lats, lons)
 
-                    del dates, dates_aft, co2mat, Tmat, Pmat, zmat
+                    del dates, dates_aft, co2mat, tmat, pmat, zmat
 
             else:
-                co2mat = nc["co2"][:]
-                Tmat = nc["temperature"][:]
-                Pmat = nc["pressure"][:]
-                zmat = nc["gph"][:]
+                co2mat = nci["co2"][:]
+                tmat = nci["temperature"][:]
+                pmat = nci["pressure"][:]
+                zmat = nci["gph"][:]
 
                 co2 = map_interp(co2mat, date, lat, lon, dates, lats, lons)
-                T = map_interp(Tmat, date, lat, lon, dates, lats, lons)
-                P = map_interp(Pmat, date, lat, lon, dates, lats, lons)
-                z = map_interp(zmat, date, lat, lon, dates, lats, lons)
+                temp = map_interp(tmat, date, lat, lon, dates, lats, lons)
+                press = map_interp(pmat, date, lat, lon, dates, lats, lons)
+                alt = map_interp(zmat, date, lat, lon, dates, lats, lons)
 
-                del dates, co2mat, Tmat, Pmat, zmat
+                del dates, co2mat, tmat, pmat, zmat
 
-            del Nlevel, Nbound, lats, lons
+            del nlev, nbound, lats, lons
 
             self.co2 = co2
-            self.T = T
-            self.P = P / 100
-            self.zbnd = z / 1000
+            self.T = temp
+            self.P = press / 100
+            self.zbnd = alt / 1000
 
         self.z = self.zbnd[:-1] + np.diff(self.zbnd) / 2
 
 
 # # # # # # #     Profile     # # # # # # #
 class Prof:
+    """
+    Class for the atmosperic profile
+    """
+
     __slots__ = (
         "file",
         "date",
@@ -408,7 +405,12 @@ class Prof:
         self.rh[inds] = np.interp(self.z[inds], sonde.z, sonde.rh)
 
     def set(self, attr_name, new):
-        # .. Get the old and new values to work with
+        """
+        Set an attribute to a new value, interpolated onto the altitudes
+        and warn user if any extrapolation occurs
+        @param attr_name  the name of the attribute
+        @param new  A class with fields that include the attribute and z
+        """
         new_val = getattr(new, attr_name)
         new_val = np.interp(self.z, new.z, new_val)
 
@@ -444,6 +446,13 @@ class Prof:
         """
 
     def set_n_scale(self, attr_name, new, surf_value):
+        """
+        Set a new value for an attribute from a profile and then scale the
+        profile to the surface value
+        @param attr_name  the name of the attribute
+        @param new  A class with fields that include the attribute and z
+        @param surf_value  The surface value to scale to
+        """
 
         new_val = getattr(new, attr_name)
         new_val = np.interp(self.z, new.z, new_val)
@@ -452,6 +461,13 @@ class Prof:
         setattr(self, attr_name, new_val)
 
     def set_upper(self, attr_name, new):
+        """
+        Set new values for an attribute from a profile where the old values
+        for that attribute are NaN, which should be in the upper atmosphere
+        using linear interpolation
+        @param attr_name  the name of the attribute
+        @param new  A class with fields that include the attribute and z
+        """
         # .. Get the old and new values to work with
         old_val = getattr(self, attr_name)
         new_val = getattr(new, attr_name)
@@ -470,6 +486,13 @@ class Prof:
             setattr(self, attr_name, old_val)
 
     def set_upper_spline(self, attr_name, new):
+        """
+        Set new values for an attribute from a profile where the old values
+        for that attribute are NaN, which should be in the upper atmosphere
+        using spline interpolation
+        @param attr_name  the name of the attribute
+        @param new  A class with fields that include the attribute and z
+        """
         # .. Get the old and new values to work with
         old_val = getattr(self, attr_name)
         new_val = getattr(new, attr_name)
@@ -489,18 +512,23 @@ class Prof:
         inds = np.where(self.z > 47)[0]  # new.z[-2]) #
         if len(inds) == 1:
             raise ValueError("len(inds) must be > 1")
-        zi = self.z[inds]
-        # print('zi[0] =', zi[0], ' in get_atm_profs_KGI_rsrc.py, line 197')
-        # print('zi[-1] =', zi[-1], ' in get_atm_profs_KGI_rsrc.py')
-        Ti = self.T[inds]
-        rhi = 0 * zi
-        Ptop = hypsometric(zi * 1000, Ti, rhi, self.P[inds[0]])
+        alti = self.z[inds]
+        # print('alti[0] =', alti[0], ' in get_atm_profs_KGI_rsrc.py, line 197')
+        # print('alti[-1] =', alti[-1], ' in get_atm_profs_KGI_rsrc.py')
+        tempi = self.T[inds]
+        rhi = 0 * alti
+        ptop = hypsometric(alti * 1000, tempi, rhi, self.P[inds[0]])
 
-        old_val[inds] = Ptop
+        old_val[inds] = ptop
         setattr(self, attr_name, old_val)
 
     def error_check(self, era):
-        # Check for NaNs
+        """
+        Check for errors, including NaNs, pressures that do not decrease, and
+        heights that do not increase, and make sure the temperature
+        differential across layers is not too large
+        @param era  ERA data, used to fill in upper-level H2O
+        """
         if (
             np.any(np.isnan(self.z))
             or np.any(np.isnan(self.P))
@@ -541,9 +569,9 @@ class Prof:
             if np.any(np.isnan(self.T)):
                 raise NameError("One or more T is NaN!")
 
-        # .. Check for heights (z) that do not monotonically increase or
-        #    pressures (P) that do not monotonically decrease
-        #    to within 3 significant figures
+        # Check for heights (z) that do not monotonically increase or
+        # pressures (P) that do not monotonically decrease
+        # to within 3 significant figures
         zmr = np.round(self.z, 3)
         pmr = np.round(self.P, 3)
         if np.any(np.diff(zmr) <= 0):
@@ -555,42 +583,46 @@ class Prof:
                 "or 0 detected."
             )
 
-        # .. Check for changes in temperature greater than 8 in lower 20 km
+        # Check for changes in temperature greater than 8 in lower 20 km
         if np.any(np.abs(np.diff(self.T[self.z <= 20])) > 8):
-            max_dT = round(np.max(np.diff(self.T[self.z <= 20])), 1)
+            maxdtemp = round(np.max(np.diff(self.T[self.z <= 20])), 1)
             print(
                 "Warning: Temperature differences in lower 20 km are up "
                 + "to "
-                + str(max_dT)
+                + str(maxdtemp)
                 + " K but should be < 8 K "
                 + "(getAtmProfs_KGI_rsrc line 465."
             )
 
-        # .. Check for changes in temperature greater than 8 K anywhere
+        # Check for changes in temperature greater than 8 K anywhere
         if np.any(np.abs(np.diff(self.T)) > 12):
-            max_dT = round(np.max(np.abs(np.diff(self.T))), 1)
+            maxdtemp = round(np.max(np.abs(np.diff(self.T))), 1)
             print(self.T)
-            import matplotlib.pyplot as plt
 
             plt.figure()
             plt.plot(self.T, self.z, ".-")
             raise NameError(
                 "Temperature differences above 20 km are up to "
-                + str(max_dT)
+                + str(maxdtemp)
                 + " K but should be < 12 K."
             )
 
     def set_surf_T(self, surfmetFiles, sonde_date):
-        z0 = self.z[0]
+        """
+        Set the surface temperature using surface meteorological data
+        @param surfmetFiles  surface met files
+        @param sonde_data
+        """
+        zsurf = self.z[0]
 
-        zmet, Tmet = get_surface_T(surfmetFiles, sonde_date)
+        zmet, tmet = get_surface_T(surfmetFiles, sonde_date)
 
-        if zmet < z0:
+        if zmet < zsurf:
             raise NameError(
                 "Met height is below sounding surface height. "
                 + "Add code to interpolate to sounding surface."
             )
-        elif zmet > z0:
+        elif zmet > zsurf:
             print(
                 "Warning: Met height is above sounding surface height "
                 + "but I am pretending surface heights are same."
@@ -601,12 +633,12 @@ class Prof:
 
         # .. Interpolate
         iht = np.where(self.z <= 0.6)[0]
-        Tnew = np.interp(
-            self.z[iht], [self.z[0], self.z[iht[-1]]], [Tmet, self.T[iht[-1]]]
+        tnew = np.interp(
+            self.z[iht], [self.z[0], self.z[iht[-1]]], [tmet, self.T[iht[-1]]]
         )
 
-        f = np.linspace(1, 0, len(iht))
-        self.T[iht] = f * Tnew + (1 - f) * self.T[iht]
+        falloff = np.linspace(1, 0, len(iht))
+        self.T[iht] = falloff * tnew + (1 - falloff) * self.T[iht]
 
     """
     def set_upper_P_carbonTracker(self, new, old_attr_name, new_attr_name):
@@ -626,41 +658,45 @@ class Prof:
     """
 
     def write_to_netcdf_file(self, outputfile):
-        with Dataset(outputfile, "w", format="NETCDF4_CLASSIC") as nc:
+        """
+        Write the results to a netcdf file
+        @param outputfile  The full output file name
+        """
+        with Dataset(outputfile, "w", format="NETCDF4_CLASSIC") as nci:
             # .. Create Dimensions
-            nc.createDimension("level", len(self.z))
-            nc.createDimension("time", 1)
-            nc.createDimension("const", 1)
-            # lat = nc.createDimension('lat', 1)
-            # lon = nc.createDimension('lon', 1)
+            nci.createDimension("level", len(self.z))
+            nci.createDimension("time", 1)
+            nci.createDimension("const", 1)
+            # lat = nci.createDimension('lat', 1)
+            # lon = nci.createDimension('lon', 1)
 
             # .. Create variables
-            nc_time = nc.createVariable("time", np.float64, ("time",))
-            nc_z = nc.createVariable("z", np.float32, ("level"))
-            nc_T = nc.createVariable("T", np.float32, ("level"))
-            nc_P = nc.createVariable("P", np.float32, ("level"))
-            nc_rh = nc.createVariable("rh", np.float32, ("level"))
-            nc_h2o = nc.createVariable("h2o", np.float32, ("level"))
-            nc_co2 = nc.createVariable("co2", np.float32, ("level"))
-            nc_o3 = nc.createVariable("o3", np.float32, ("level"))
-            nc_f11 = nc.createVariable("f11", np.float32, ("level"))
-            nc_f12 = nc.createVariable("f12", np.float32, ("level"))
-            nc_f113 = nc.createVariable("f113", np.float32, ("level"))
-            nc_hno3 = nc.createVariable("hno3", np.float32, ("level"))
-            nc_model_extra = nc.createVariable(
+            nc_time = nci.createVariable("time", np.float64, ("time",))
+            nc_z = nci.createVariable("z", np.float32, ("level"))
+            nc_t = nci.createVariable("T", np.float32, ("level"))
+            nc_p = nci.createVariable("P", np.float32, ("level"))
+            nc_rh = nci.createVariable("rh", np.float32, ("level"))
+            nc_h2o = nci.createVariable("h2o", np.float32, ("level"))
+            nc_co2 = nci.createVariable("co2", np.float32, ("level"))
+            nc_o3 = nci.createVariable("o3", np.float32, ("level"))
+            nc_f11 = nci.createVariable("f11", np.float32, ("level"))
+            nc_f12 = nci.createVariable("f12", np.float32, ("level"))
+            nc_f113 = nci.createVariable("f113", np.float32, ("level"))
+            nc_hno3 = nci.createVariable("hno3", np.float32, ("level"))
+            nc_model_extra = nci.createVariable(
                 "model_extra", np.int8, ("const")
             )
 
             # .. Global attributes
-            nc.filename = self.file
-            nc.history = "Created " + time.ctime(time.time())
+            nci.filename = self.file
+            nci.history = "Created " + time.ctime(time.time())
 
             # .. Variable attributes
             nc_time.units = "hours since 0001-01-01 00:00:00"
             nc_time.calendar = "gregorian"
             nc_z.units = self.units["z"]
-            nc_T.units = self.units["T"]
-            nc_P.units = self.units["P"]
+            nc_t.units = self.units["T"]
+            nc_p.units = self.units["P"]
             nc_rh.units = "%"
             nc_h2o.units = self.units["h2o"]
             nc_co2.units = self.units["co2"]
@@ -675,8 +711,8 @@ class Prof:
                 self.date, units=nc_time.units, calendar=nc_time.calendar
             )
             nc_z[:] = self.z
-            nc_T[:] = self.T
-            nc_P[:] = self.P
+            nc_t[:] = self.T
+            nc_p[:] = self.P
             nc_rh[:] = self.rh
             nc_h2o[:] = self.h2o
             nc_co2[:] = self.co2
@@ -689,36 +725,47 @@ class Prof:
 
 
 def get_co2(sonde_date, sonde_lat, co2_drake, co2_palmer):
+    """
+    Get surface CO2 data from Drake Passage or Palmer station, if available.
+    to correspond with sounding. If not available, use best estimate from data
+    @param sonde_date  Date of sounding
+    @param sonde_lat  Latitude of sounding
+    @param co2_drake  Surface CO2 measurements with time in Drake Passage
+    @param co2_palmer  Surface CO2 measurements with time at Palmer
+    """
     # # # #
     # Uncomment and put text below this line in class
     # co2 = CO2(co2_file_palmer, co2_file_drake, sonde.date, lat, lon)
     #
-    import calendar
 
-    def toTimestamp(d):
-        return calendar.timegm(d.timetuple())
+    def to_tstamp(dtime):
+        """
+        Convert date to timestamp
+        @param dtime  Date
+        """
+        return calendar.timegm(dtime.timetuple())
 
-    def interp_co2_to_date(sonde_date, station_date, station_co2, station_lat):
-        iaft = bisect(station_date, sonde_date)
+    def interp_co2_to_date(sonde_date, sta_date, sta_co2, sta_lat):
+        """
+        Interpolate co2 to a date
+        @param sonde_date  Date of sounding
+        @param co2date  Date corresponding to surface co2 measurement
+        @param co2  CO2 measurement
+        @param co2lat  Latitude of CO2 measurement
+        """
+        iaft = bisect(sta_date, sonde_date)
         ibef = iaft - 1
 
-        # .. Sometimes the "before" date is actually slightly after
-        #    the first date in the file. In this case, decrease ibef and iaft
-        if min(station_date) > sonde_date:
+        # Sometimes the "before" date is actually slightly after
+        # the first date in the file. In this case, decrease ibef and iaft
+        if min(sta_date) > sonde_date:
             ibef -= 1
             iaft -= 1
 
-        # .. Get the Drake Passage CO2 value
-
-        x = np.array(
-            [toTimestamp(station_date[ibef]), toTimestamp(station_date[iaft])]
-        )
-        co2 = np.interp(
-            toTimestamp(sonde_date), x, station_co2[ibef : iaft + 1]
-        )
-        lat = np.interp(
-            toTimestamp(sonde_date), x, station_lat[ibef : iaft + 1]
-        )
+        # Get the Drake Passage CO2 value
+        tstp = np.array([to_tstamp(sta_date[ibef]), to_tstamp(sta_date[iaft])])
+        co2 = np.interp(to_tstamp(sonde_date), tstp, sta_co2[ibef : iaft + 1])
+        lat = np.interp(to_tstamp(sonde_date), tstp, sta_lat[ibef : iaft + 1])
 
         return co2, lat
 
@@ -759,20 +806,26 @@ def get_co2(sonde_date, sonde_lat, co2_drake, co2_palmer):
         )
 
     # Interpolate to desired latitude
-    if use_palmer == True and use_drake == True:
+    if use_palmer and use_drake:
         fco2 = interpolate.interp1d(
             [lat_drake0, lat_palmer0], [co2_drake0, co2_palmer0]
         )
         return fco2(sonde_lat)
-    elif use_palmer == True:
+
+    if use_palmer:
         return co2_palmer0
-    elif use_drake == True:
+
+    if use_drake:
         return co2_drake
-    else:
-        raise ValueError("No co2 data to use")
+
+    raise ValueError("No co2 data to use")
 
 
 class Era:
+    """
+    Get profile information from ERA data
+    """
+
     __slots__ = ("P", "T", "o3", "rh", "z")
 
     def __init__(self, eraFiles, era_fileformat, date, lat, lon):
@@ -795,15 +848,15 @@ class Era:
 
         # Load ERA-Interim nc file
         fname = eraFiles.files[idate]
-        with Dataset(eraFiles.dir + fname, "r", format="NETCDF4") as nc:
+        with Dataset(eraFiles.dir + fname, "r", format="NETCDF4") as nci:
             # Variables, for convenience
             # 'longitude', 'latitude', 'level', 'time', 't', 'r'
             # Dimensions for t, r, o3, z:
             # (time, level, latitude, longitude)
-            lats = nc["latitude"][:]
-            lons = nc["longitude"][:]
+            lats = nci["latitude"][:]
+            lons = nci["longitude"][:]
             dates = num2date(
-                nc["time"][:], nc["time"].units, nc["time"].calendar
+                nci["time"][:], nci["time"].units, nci["time"].calendar
             )
 
             # Check units
@@ -817,26 +870,26 @@ class Era:
             }
 
             for exptd in expectedvars:
-                if exptd not in nc.variables.keys():
+                if exptd not in nci.variables.keys():
                     raise NameError(
                         "Expected variable in ERA file missing: " + exptd
                     )
-                if nc[exptd].units != expectedvars[exptd]:
+                if nci[exptd].units != expectedvars[exptd]:
                     msg1 = "Expected units of " + expectedvars[exptd] + " for "
-                    msg2 = exptd + ", but got " + nc[exptd].units
+                    msg2 = exptd + ", but got " + nci[exptd].units
                     raise ValueError(msg1 + msg2)
 
-            tmat = nc["t"][:]
-            o3mat = nc["o3"][:]
-            rhmat = nc["r"][:]
-            zmat = nc["z"][:] / 9.80665 / 1000
+            tmat = nci["t"][:]
+            o3mat = nci["o3"][:]
+            rhmat = nci["r"][:]
+            zmat = nci["z"][:] / 9.80665 / 1000
 
             temp = map_interp(tmat, date, lat, lon, dates, lats, lons)
             ozone = map_interp(o3mat, date, lat, lon, dates, lats, lons)
             rhw = map_interp(rhmat, date, lat, lon, dates, lats, lons)
             height = map_interp(zmat, date, lat, lon, dates, lats, lons)
 
-            self.P = nc["level"][:]
+            self.P = nci["level"][:]
             self.T = temp
             self.o3 = ozone * 1000  # kg/kg * 1000 g/kg => g/kg
             self.rh = rhw
@@ -900,16 +953,16 @@ class Era:
           For rh, extrapolate
           For ozone, extrapolate
         """
-        zi = np.array([self.z[-1], carbonTracker.z[-1]])
-        Ti = np.array([self.T[-1], carbonTracker.T[-1]])
+        alti = np.array([self.z[-1], carbonTracker.z[-1]])
+        tempi = np.array([self.T[-1], carbonTracker.T[-1]])
         rhi = np.array([self.rh[-1], self.rh[-1]])
-        # print('zi[0] =', zi[0], ' in get_atm_profs_KGI_rsrc.py, line 517')
-        # print('zi[-1] =', zi[-1], ' in get_atm_profs_KGI_rsrc.py')
-        Ptop = hypsometric(zi * 1000, Ti, rhi, self.P[-1])
+        # print('alti[0] =', alti[0], ' in get_atm_profs_KGI_rsrc.py, line 517')
+        # print('alti[-1] =', alti[-1], ' in get_atm_profs_KGI_rsrc.py')
+        ptop = hypsometric(alti * 1000, tempi, rhi, self.P[-1])
 
-        self.T = np.hstack([self.T, np.interp(60, zi, Ti)])
+        self.T = np.hstack([self.T, np.interp(60, alti, tempi)])
         self.rh = np.hstack([self.rh, self.rh[-1]])
-        self.P = np.hstack([self.P, Ptop[-1]])
+        self.P = np.hstack([self.P, ptop[-1]])
         self.o3 = np.hstack([self.o3, np.interp(60, self.z, self.o3)])
         self.z = np.hstack([self.z, 60.0])
 
@@ -923,8 +976,13 @@ class Era:
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-# # # # # # #  Get closest date without going over
+# # # # # # #
 def nearest(items, pivot):
+    """
+    Get closest date without going over
+    @param items  Items to find minimum of
+    @param pivot
+    """
     return min(items, key=lambda x: abs(x - pivot))
 
 
@@ -954,6 +1012,7 @@ def get_files(direc, fmt):
 
 def map_interp(amat, date, lat, lon, dates, lats, lons):
     """
+    Interpolate to lat/lon/date
     dims of amat must be as follows:
     amat = time, level, lat, lon
     e.g.   (8,    25,   90, 120)
@@ -970,8 +1029,8 @@ def map_interp(amat, date, lat, lon, dates, lats, lons):
     ilat = flat(lat)
     ilon = flon(lon)
 
-    dd = [d - date for d in dates]
-    dday = [d.days + d.seconds / 60 / 60 / 24 for d in dd]
+    ddate = [d - date for d in dates]
+    dday = [d.days + d.seconds / 60 / 60 / 24 for d in ddate]
     itime = np.interp(0, dday, np.arange(len(dday)))
 
     # As arrays
@@ -993,27 +1052,47 @@ def get_surface_T(surfmetFiles, sonde_date):
 
     ism = bisect_right(surfmetFiles.dates, sonde_date) - 1
     metfname = surfmetFiles.dir + surfmetFiles.files[ism]
-    with Dataset(metfname, "r", format="NETCDF4") as nc:
-        itime = date2index(sonde_date, nc.variables["time"], select="after")
+    with Dataset(metfname, "r", format="NETCDF4") as nci:
+        itime = date2index(sonde_date, nci.variables["time"], select="after")
 
-        if (itime == 0) or (sonde_date == nc.variables["time"][itime]):
-            Tmet = nc.variables["temp_mean"][itime] + 273.15
+        if (itime == 0) or (sonde_date == nci.variables["time"][itime]):
+            tmet = nci.variables["temp_mean"][itime] + 273.15
         else:
             surf_time = num2date(
-                nc.variables["time"][:], nc.variables["time"].units
+                nci.variables["time"][:], nci.variables["time"].units
             )
-            dd = surf_time[itime - 1 : itime + 1] - sonde_date
-            dmin = [d.days * 24 * 60 + d.seconds / 60 for d in dd]
-            wt = np.flipud(np.abs(dmin))
-            wt = wt / np.sum(wt)
-            Tmet = (
-                wt[0] * nc.variables["temp_mean"][itime - 1]
-                + wt[1] * nc.variables["temp_mean"][itime]
+            ddate = surf_time[itime - 1 : itime + 1] - sonde_date
+            dmin = [d.days * 24 * 60 + d.seconds / 60 for d in ddate]
+            wts = np.flipud(np.abs(dmin))
+            wts = wts / np.sum(wts)
+            tmet = (
+                wts[0] * nci.variables["temp_mean"][itime - 1]
+                + wts[1] * nci.variables["temp_mean"][itime]
                 + 273.15
             )
-        zmet = nc["alt"][:] / 1000
+        zmet = nci["alt"][:] / 1000
 
-    return zmet, Tmet
+    return zmet, tmet
 
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# class HMS_to_hours:
+#     def __init__(self, default=float("nan")):
+#         # self.first = None
+#         self.default = default
+
+#     def __call__(self, value):
+#         value = value.decode("ascii", "ignore").strip()
+#         if not value:  # no value
+#             return self.default
+#         try:  # specify input format here
+#             current = datetime.strptime(value, "%H:%M:%S")
+#         except ValueError:  # can't parse the value
+#             return self.default
+#         else:
+#             return current
+#             # if self.first is not None:
+#             #    return (current - self.first).total_seconds()
+#             # else:
+#             #    self.first = current
+#             #    return 0.0
