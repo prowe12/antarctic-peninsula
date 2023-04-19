@@ -23,7 +23,7 @@ B) Convert the raw data files into standardized data files, using code in escude
 4) ERA5: get_era5_from_web.py\
 5) CO2: These files are left in their original format\
 \
-Longwave:\
+C) Longwave:\
 1) Do steps A1 and B1 above for the desired date range.\
 2) get_atm_profs.py: Create atmospheric profiles from radiosondes and ancillary data\
 3) run_radtran.py: with bwn=238, ewn=1500: Do LBLRTM runs to get clear-sky fluxes\
@@ -31,13 +31,13 @@ Longwave:\
 5) Manually copy flux files to lw_flux directory.\
 6) Subtract cloudy and clear-sky fluxes to get LW forcing\
 \
-Shortwave:\
+D) Shortwave:\
 1) get_pyranometer_files.py: Get pyranometer data from .CSV files. \
 2) get_pyranometer_factor.py: Fit to clear sky times to get factor for pyranometer\
 3) broadband_plots.py: Get and plot clear-sky SW fluxes.\
 4) Subtract cloudy and clear-sky fluxes to get SW forcing\
 \
-miniMPL (prep for Robert Stillwell):\
+E) miniMPL (prep for Robert Stillwell):\
 1) Manual, on PC laptop: Create minute netcdf files\
 2) Manual, on PC laptop: Create netcdf files in Stillwell format\
 3) Manual, on PC laptop: Create after pulse .mpl and .csv files.\

@@ -117,10 +117,17 @@ def get_atm_profs(atm_prof_params, esc_params, esc_case):
     # # # # # # #     START MAIN CODE     # # # # # # #
 
     # Pad out dates by a few days
+    # TODO
     start_date = dt.datetime(
         start_date.year,
         start_date.month,
-        start_date.day + 2,
+        start_date.day - 2,
+        tzinfo=dt.timezone.utc,
+    )
+    end_date = dt.datetime(
+        end_date.year,
+        end_date.month,
+        end_date.day + 1,
         tzinfo=dt.timezone.utc,
     )
 

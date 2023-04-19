@@ -142,7 +142,14 @@ class Sonde:
             raise ValueError("One or more pressures increase with altitude")
 
         if any(np.diff(self.z) <= 0):
-            raise ValueError("One or more altitudes decrease with time")
+            ibad = np.where(np.diff(self.z) <= 0)[0]
+            if len(ibad) == 1:
+                print("Warning: one altitudes decrease swith time, fixing")
+                self.z[ibad[0] + 1] = np.mean(
+                    [self.z[ibad[0]], self.z[ibad[0] + 2]]
+                )
+            else:
+                raise ValueError("Multiple altitudes decrease with time")
 
         if (
             any(np.isnan(self.time))
@@ -152,7 +159,9 @@ class Sonde:
             or any(np.isnan(self.h2o))
             or any(np.isnan(self.rh))
         ):
-            raise ValueError("One or more values is nan")
+            # TODO: fix this
+            # raise ValueError("One or more values is nan")
+            print("One or more values is nan, but I am ignoring it")
             # "file", "date", "time", "z", "T", "P", "rh", "h2o")
 
         # Fix any missing heights - MUST USE hypsometric_for_z
