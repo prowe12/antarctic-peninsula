@@ -205,7 +205,7 @@ class CO2stationData:
         )
         list(stn.columns.values)
 
-        # .. Get datetime
+        # Get datetime
         self.date = list(
             map(
                 lambda year, month, day, hour, minute, second: dt.datetime(
@@ -251,7 +251,7 @@ class CarbonTracker:
             ibef -= 1
             iaft -= 1
 
-        # .. Open the netcdf co2 file and get the data
+        # Open the netcdf co2 file and get the data
         with Dataset(co2Files.dir + co2Files.files[ibef], "r") as nci:
             """
             # nci['co2'].shape
@@ -367,14 +367,14 @@ class Prof:
         self.co2 = np.nan * np.ones(nlyr)
         self.o3 = np.nan * np.ones(nlyr)
 
-        # .. Guess values (based on fit to a single measurement,
+        # Guess values (based on fit to a single measurement,
         #    needs improvement)
         self.f113 = 0.00008 * np.ones(nlyr)  # 800-828, 870-930,
         self.f11 = 0.00026 * np.ones(nlyr)  # 830-860, 1060-1107
         self.hno3 = 0.002 * np.ones(nlyr)  # 860-920
         self.f12 = 0.00053 * np.ones(nlyr)  # 867-937, 1080-1177
 
-        # .. Units for ozone are jchar = C for g/kg
+        # Units for ozone are jchar = C for g/kg
         self.units = dict(
             {
                 ("z", "km"),
@@ -468,7 +468,7 @@ class Prof:
         @param attr_name  the name of the attribute
         @param new  A class with fields that include the attribute and z
         """
-        # .. Get the old and new values to work with
+        # Get the old and new values to work with
         old_val = getattr(self, attr_name)
         new_val = getattr(new, attr_name)
         new_val = np.interp(self.z, new.z, new_val)
@@ -493,13 +493,15 @@ class Prof:
         @param attr_name  the name of the attribute
         @param new  A class with fields that include the attribute and z
         """
-        # .. Get the old and new values to work with
+        # Get the old and new values to work with
         old_val = getattr(self, attr_name)
         new_val = getattr(new, attr_name)
 
-        # .. Do the spline interpolation
-        tck = interpolate.splrep(new.z, new_val)
-        new_val = interpolate.splev(self.z, tck)
+        # Do the interpolation. Do not use spline because it can
+        # distort the pressures
+        # tck = interpolate.splrep(new.z, new_val)
+        # new_val = interpolate.splev(self.z, tck)
+        new_val = np.interp(self.z, new.z, new_val)
 
         inds = np.intersect1d(
             np.where(self.z >= new.z[0])[0], np.where(self.z <= new.z[-1])[0]
@@ -631,7 +633,7 @@ class Prof:
         elif zmet - self.z != 0:
             raise NameError("Bad value for met height")
 
-        # .. Interpolate
+        # Interpolate
         iht = np.where(self.z <= 0.6)[0]
         tnew = np.interp(
             self.z[iht], [self.z[0], self.z[iht[-1]]], [tmet, self.T[iht[-1]]]
@@ -642,11 +644,11 @@ class Prof:
 
     """
     def set_upper_P_carbonTracker(self, new, old_attr_name, new_attr_name):
-        # .. Get the old and new values to work with
+        # Get the old and new values to work with
         old_val = getattr(self, old_attr_name)
         new_val = getattr(new, new_attr_name)
         
-        # .. Do the spline interpolation 
+        # Do the spline interpolation 
         tck = interpolate.splrep(new.zbnd, new_val)
         new_val = interpolate.splev(self.z, tck)
         
@@ -663,14 +665,14 @@ class Prof:
         @param outputfile  The full output file name
         """
         with Dataset(outputfile, "w", format="NETCDF4_CLASSIC") as nci:
-            # .. Create Dimensions
+            # Create Dimensions
             nci.createDimension("level", len(self.z))
             nci.createDimension("time", 1)
             nci.createDimension("const", 1)
             # lat = nci.createDimension('lat', 1)
             # lon = nci.createDimension('lon', 1)
 
-            # .. Create variables
+            # Create variables
             nc_time = nci.createVariable("time", np.float64, ("time",))
             nc_z = nci.createVariable("z", np.float32, ("level"))
             nc_t = nci.createVariable("T", np.float32, ("level"))
@@ -687,11 +689,11 @@ class Prof:
                 "model_extra", np.int8, ("const")
             )
 
-            # .. Global attributes
+            # Global attributes
             nci.filename = self.file
             nci.history = "Created " + time.ctime(time.time())
 
-            # .. Variable attributes
+            # Variable attributes
             nc_time.units = "hours since 0001-01-01 00:00:00"
             nc_time.calendar = "gregorian"
             nc_z.units = self.units["z"]
@@ -706,7 +708,7 @@ class Prof:
             nc_f12.units = self.units["f12"]
             nc_f113.units = self.units["f113"]
 
-            # .. Assign values
+            # Assign values
             nc_time[:] = date2num(
                 self.date, units=nc_time.units, calendar=nc_time.calendar
             )
