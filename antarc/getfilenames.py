@@ -9,6 +9,7 @@ Created on Fri Jul  1 11:34:07 2022
 import numpy as np
 import os
 import datetime as dt
+from typing import Any
 
 
 def getfilenames(direc: str, flen: int, pfix: str) -> list:
@@ -51,7 +52,7 @@ def get_filenames_3(direc: str, fmt: str) -> list:
     return [x for x in files if len(x) == flen and x[:3] == samplefile[:3]]
 
 
-def get_filenames_dates(direc: str, fmt: str) -> tuple[tuple]:
+def get_filenames_dates(direc: str, fmt: str):
     """
     Get all filenames having the specified length and prefix, and datetimes
     @param direc  Desired directory to get file names from
@@ -101,7 +102,7 @@ def getfilenames_daterange(
 
 def getfiles_for_daterange(
     direc: str, fmt: str, dt1: dt.datetime, dt2: dt.datetime
-) -> tuple[np.ndarray, np.ndarray]:
+):
     """
     Get a list of filenames and dates for dates between two values
     @param direc  Directory where files are
@@ -111,12 +112,12 @@ def getfiles_for_daterange(
     @return List of files between start and end dates
     @return List of dates corresponding to files
     """
-    files = get_filenames(direc, fmt)
-    dates = [
+    filesl = get_filenames(direc, fmt)
+    datesl = [
         dt.datetime.strptime(f, fmt).replace(tzinfo=dt.timezone.utc)
-        for f in files
+        for f in filesl
     ]
-    dates = np.array(dates)
-    files = np.array(files)
+    dates = np.array(datesl)
+    files = np.array(filesl)
     ikeep = np.where(np.logical_and(dates >= dt1, dates <= dt2))[0]
     return [files[x] for x in ikeep], dates[ikeep]
