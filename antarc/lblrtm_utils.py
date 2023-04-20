@@ -793,12 +793,6 @@ def read_TAPE12_lblrtm(filename=None, prec="s"):
         nlima.fromfile(fp, 1)
         nlim = nlima[0]
 
-        # print(v1)
-        # print(v2)
-        # print(dv)
-        # print(nlim)
-        # print(' ')
-
         eor1 = array.array("i")
         eor1.fromfile(fp, 2)
 
@@ -809,7 +803,12 @@ def read_TAPE12_lblrtm(filename=None, prec="s"):
         try:
             rad[ir1:ir2] = sblock  # rad = np.append(rad, sblock)
         except:
-            print("problem")
+            print("problem: rad not big enough. Make it bigger")
+            radtmp = rad
+            rad = np.zeros(10 * ir2)
+            rad[: len(radtmp)] = radtmp
+            rad[ir1:ir2] = sblock  # rad = np.append(rad, sblock)
+
         ir1 = ir2
 
         # 4 x 2 bytes junk
@@ -820,7 +819,16 @@ def read_TAPE12_lblrtm(filename=None, prec="s"):
         sblock = array.array(floaty)
         sblock.fromfile(fp, nlim)
         it2 = it1 + len(sblock)
-        trans[it1:it2] = sblock  # trans = np.append(trans, sblock)
+
+        try:
+            trans[it1:it2] = sblock  # trans = np.append(trans, sblock)
+        except:
+            print("problem: trans not big enough. Make it bigger")
+            radtmp = trans
+            trans = np.zeros(10 * it2)
+            trans[: len(radtmp)] = radtmp
+            trans[it1:it2] = sblock  # trans = np.append(trans, sblock)
+
         it1 = it2
 
         if nlim < 2400:
