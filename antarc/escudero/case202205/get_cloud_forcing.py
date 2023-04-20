@@ -9,52 +9,49 @@ Purpose: Plot broadband radiation at Escudero on 2022/02
 """
 
 # Dependencies
-import numpy as np
 import datetime as dt
-import pandas as pd
-from os.path import exists
-import os
+import numpy as np
 
 # My modules
-from antarc.load_rad_flux import load_rad_flux
 from antarc.run_radtran import get_clear_fluxes
 from antarc.escudero.get_lwd_flux import get_lwd, get_lwd_clear
 from antarc.escudero.get_atm_profs import get_atm_profs
-from antarc.escudero.get_swd_flux import get_obs_swd, get_pysolar_swd
-from antarc.escudero.get_swd_flux import get_libradtran
+from antarc.escudero.get_swd_flux import get_obs_swd, get_libradtran
 from antarc.escudero.get_era5_from_web import get_era5_from_web
 from antarc.escudero.case202205.make_plots import plot_measured_and_clear
+from antarc.escudero.case202205.make_plots import plot_forcings
+from antarc.escudero.case202205.make_plots import plot_meas_clear_forcings
+
+
+# Parameter modules specific to the user: the user must create params.py
+# in the directory antarc with the variables MEAS_DIR and PROJ_DIR set
+from antarc import params
 
 # Parameter modules
 from antarc.escudero.parameters import esc202205 as esc_case
 from antarc.escudero.parameters import esc_params, atm_prof_params
 from antarc.escudero.parameters import swd_params, lwd_params, radtran_params
 
-# from antarc.escudero.parameters import radtran_params
-# Parameter modules
-# from antarc.escudero.parameters import esc_params, swd_params
-# from antarc.escudero.parameters import esc202205 as esc_case
-
-
-# TODO: get this info from the parameter file
-dir_lwdclear = "/Users/prowe/sync/measurements/Escudero/lwd_clear/"
-out_dir = "/Users/prowe/Sync/projects/NSF_AP/case_studies/May_2022/figures/"
-fig1name = out_dir + "lwd_swd.png"
-fig2name = out_dir + "lwd_swd_zoom.png"
-
 utc = dt.timezone.utc
 
+# TODO: get this info from the parameter file
+MEAS_DIR = params.MEAS_DIR
+dir_lwdclear = MEAS_DIR + "Escudero/lwd_clear/"
+out_dir = params.PROJECT_DIR + "case_studies/May_2022/figures/"
+
 # Run flags
-savefigs = False
+SAVEFIGS = True
+REDO = False  # redo calculations even if they already exist
 
 date1 = esc_case.DATE1
 date2 = esc_case.DATE2
 
 # B4) Get ERA5 data
-get_era5_from_web(esc_params, esc_case, False)
+get_era5_from_web(esc_params, esc_case, REDO)
 
 # C) Longwave
 # C2) Create the atmospheric profiles
+# TODO: Add a "redo" option here, and an option to suppress making plots
 get_atm_profs(atm_prof_params, esc_params, esc_case)
 
 # C3)
@@ -70,7 +67,7 @@ get_atm_profs(atm_prof_params, esc_params, esc_case)
 #     if len(file) == len(samplefile) and file[:4] == samplefile[:4]:
 #         pfile = dt.strptime(file, fmt).stftime(lwdfmt)
 #         lwdfile = f"{dir_lwdclear}{pfile}"
-get_clear_fluxes(dir_lwdclear, radtran_params, (date1, date2), 3, False)
+get_clear_fluxes(dir_lwdclear, radtran_params, (date1, date2), 3, REDO)
 
 # C4) Load in measd LWD and  clear sky files created in previous step
 lwd_date, lwd = get_lwd(lwd_params, date1, date2)
@@ -119,8 +116,7 @@ swd[swd < 0] = 0
 # D2) If needed, calculate the libradtran results and save to file
 # # _, diffuse, diffuse_fac = get_pysolar_swd(swd_params, esc_params, swd_date)
 # # swd_date, swd, swd_clear_lib, swd_clear, diffuse, diffuse_fac = get_swd()
-redo = False
-libdate, swd_clear = get_libradtran(esc_params, swd_date, clrfile, redo)
+libdate, swd_clear = get_libradtran(esc_params, swd_date, clrfile, REDO)
 lib_tstamp = [x.timestamp() for x in libdate]
 swd_tstamp = [x.timestamp() for x in swd_date]
 swd_clear = np.interp(swd_tstamp, lib_tstamp, swd_clear)
@@ -128,10 +124,9 @@ swd_clear = np.interp(swd_tstamp, lib_tstamp, swd_clear)
 # D3) Subtract cloudy and clear-sky fluxes to get SW forcing
 swd_force = swd - swd_clear
 
-start_date = swd_date[0]
+start_date = swd_date[1900]
 final_date = swd_date[-1]
-savef = False
-fname = ""
+
 
 plot_measured_and_clear(
     swd_date,
@@ -141,10 +136,64 @@ plot_measured_and_clear(
     lwd,
     lwd_clear_date,
     lwd_clear,
-    savef,
-    fname,
+    SAVEFIGS,
+    out_dir + "lwd_swd_202205_10_17.eps",
 )
 
+plot_meas_clear_forcings(
+    swd_date,
+    swd,
+    swd_clear,
+    swd_force,
+    lwd_date,
+    lwd,
+    lwd_clear_date,
+    lwd_clear,
+    lwd_force,
+    SAVEFIGS,
+    out_dir + "lwd_swd_forcing_202205_10_17.eps",
+    start_date,
+    final_date,
+)
+
+plot_forcings(
+    swd_date,
+    swd,
+    swd_clear,
+    swd_force,
+    lwd_date,
+    lwd,
+    lwd_clear_date,
+    lwd_clear,
+    lwd_force,
+    start_date,
+    final_date,
+    "%d",
+    "2022/05/16",
+    SAVEFIGS,
+    out_dir + "forcing_202205_10_17.eps",
+)
+
+# For this plot, manually change the xlabel in plot_forcings
+start_date = dt.datetime(2022, 5, 16)
+final_date = swd_date[-1]
+plot_forcings(
+    swd_date,
+    swd,
+    swd_clear,
+    swd_force,
+    lwd_date,
+    lwd,
+    lwd_clear_date,
+    lwd_clear,
+    lwd_force,
+    start_date,
+    final_date,
+    "%H",
+    "Hour on 2022/05/16",
+    SAVEFIGS,
+    out_dir + "forcing_20220516.eps",
+)
 
 # # Cumulative forcing for SWD
 # swd_tstamp = [x.timestamp() for x in swd_date]

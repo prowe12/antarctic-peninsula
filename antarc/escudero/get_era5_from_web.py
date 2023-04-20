@@ -11,6 +11,9 @@ from os.path import exists
 
 from antarc.get_era5_from_web import get_paramsets, get_era5
 
+# Parameter modules
+from antarc import params
+
 
 def get_era5_from_web(esc_params, esc_case, redo):
     LATITUDE = esc_params.LATITUDE
@@ -20,7 +23,8 @@ def get_era5_from_web(esc_params, esc_case, redo):
     DATE1 = esc_case.DATE1
     DATE2 = esc_case.DATE2
 
-    outdir = "/Users/prowe/Sync/measurements/Escudero/era5/"
+    MEAS_DIR = params.MEAS_DIR
+    outdir = MEAS_DIR + "Escudero/era5/"
 
     north = np.round(LATITUDE / 0.25) * 0.25 + 0.25
     east = np.round(LONGITUDE / 0.25) * 0.25 + 0.25

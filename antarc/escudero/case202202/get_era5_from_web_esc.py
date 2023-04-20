@@ -12,6 +12,9 @@ from antarc.escudero.parameters import esc_params
 from antarc.escudero.parameters import esc202202
 from antarc.get_era5_from_web import get_paramsets, get_era5
 
+# Parameter modules, specific to user
+from antarc.params import params
+
 
 LATITUDE = esc_params.LATITUDE
 LONGITUDE = esc_params.LONGITUDE
@@ -21,7 +24,8 @@ DATE1 = esc202202.DATE1
 DATE2 = esc202202.DATE2
 
 
-outdir = "/Users/prowe/Sync/measurements/Escudero/era5/"
+MEAS_DIR = params.MEAS_DIR
+outdir = MEAS_DIR + "Escudero/era5/"
 
 north = np.round(LATITUDE / 0.25) * 0.25 + 0.25
 east = np.round(LONGITUDE / 0.25) * 0.25 + 0.25

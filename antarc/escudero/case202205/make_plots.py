@@ -26,10 +26,6 @@ def plot_measured_and_clear(
 
     ax1.plot(swd_date, swd, "r", label="Measured")
     ax1.plot(swd_date, swd_clr, "k--", label="Clear")
-    # global down
-    # ax1.plot(swd_date[ind], swd_clear_lib[:, 0], "ks")  # direct
-    # ax1.plot(swd_date[ind], swd_clear_lib[:, 2], "c.")  # diffuse down
-    # ax1.plot(swd_date[ind], swd_clear_lib[:, 3], "m+")  # diffuse up
     ax1.legend()
     ax1.xaxis.set_major_formatter(mdates.DateFormatter(datefmt))
     ax1.tick_params(axis="x", rotation=rot)
@@ -65,10 +61,7 @@ def plot_meas_clear_forcings(
 ):
 
     rot = 40
-    # datefmt = "%d %H"
-    # fdate = swd_date[isw - 1]
-    # fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2)
-    plt.figure(num=3, figsize=[6.5, 5.6])
+    plt.figure(num=2, figsize=[6.5, 5.6])
     plt.clf()
     ax1 = plt.subplot(311)
     ax2 = plt.subplot(312, sharex=ax1)
@@ -81,7 +74,7 @@ def plot_meas_clear_forcings(
     ax1.plot(swd_date, swd, color="red", label="Meas")
     ax1.plot(swd_date, swd_clr, "k--", label="Clear")
     ax1.legend()
-    ax1.set_ylim([-2, 1000])
+    ax1.set_ylim([-2, 120])
     ax1.xaxis.set_major_formatter(mdates.DateFormatter("%d %H"))
     ax1.tick_params(axis="x", rotation=rot, labelcolor="white")
     ax1.set_xlim(start_date, final_date)
@@ -90,7 +83,7 @@ def plot_meas_clear_forcings(
 
     ax2.plot(lwd_date, lwd, color="blue", label="Measured")
     ax2.plot(lwd_clr_date, lwd_clr, "o:", color="blue", label="Clear")
-    ax2.set_ylim([0, 400])
+    ax2.set_ylim([150, 350])
     ax2.legend()
     ax2.xaxis.set_major_formatter(mdates.DateFormatter("%d %H"))
     ax2.tick_params(axis="x", rotation=rot, labelcolor="white")
@@ -98,17 +91,59 @@ def plot_meas_clear_forcings(
     ax2.set_ylabel("LWD (W/m$^{2}$)")
 
     tot_force = swd_force + lwd_force
-    ax3.plot(lwd_date, lwd_force, color="blue", label="LWD")
+    ax3.plot(lwd_date, lwd_force, color="blue", linewidth=2, label="LWD")
     ax3.plot(swd_date, swd_force, color="red", label="SWD")
-    ax3.plot(swd_date, tot_force, "k", label="Total")
+    ax3.plot(swd_date, tot_force, color="orange", label="Total")
     ax3.plot(lwd_date, np.zeros(len(lwd_date)), "k:")
     ax3.legend()
     ax3.xaxis.set_major_formatter(mdates.DateFormatter("%d %H"))
-    ax3.set_ylim([-600, 600])
+    ax3.set_ylim([-100, 150])
     ax3.tick_params(axis="x", rotation=rot)
     ax3.set_ylabel("Forcing (W/m$^{2}$)")
     ax3.legend(loc=[0.01, 0.62])
 
-    # fname = out_dir + "lwd_swd_forcing_short_timespan.png"
+    if savef:
+        plt.savefig(fname)
+
+
+def plot_forcings(
+    swd_date,
+    swd,
+    swd_clr,
+    swd_force,
+    lwd_date,
+    lwd,
+    lwd_clr_date,
+    lwd_clr,
+    lwd_force,
+    start_date,
+    final_date,
+    datefmt: str = "%d",
+    xlab: str = "Day of 2022/05",
+    savef: bool = False,
+    fname: str = "",
+):
+
+    rot = 0
+    plt.figure(num=3)  # , figsize=[6.5, 5.6])
+    plt.clf()
+    ax3 = plt.subplot(111)
+    ax3.set_position([0.13, 0.11, 0.84, 0.84])
+
+    tot_force = swd_force + lwd_force
+    ax3.plot(lwd_date, lwd_force, color="orange", linewidth=3, label="LWD")
+    ax3.plot(swd_date, swd_force, color="red", label="SWD")
+    ax3.plot(swd_date, tot_force, color="blue", label="Total")
+    ax3.plot(lwd_date, np.zeros(len(lwd_date)), "k:")
+    ax3.legend()
+    ax3.xaxis.set_major_formatter(mdates.DateFormatter(datefmt))
+    ax3.tick_params(axis="x", rotation=rot)
+    ax3.set_xlabel(xlab)
+
+    ax3.set_xlim(start_date, final_date)
+    ax3.set_ylim([-75, 150])
+    ax3.tick_params(axis="x", rotation=rot)
+    ax3.set_ylabel("Forcing (W/m$^{2}$)")
+
     if savef:
         plt.savefig(fname)

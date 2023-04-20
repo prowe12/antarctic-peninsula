@@ -57,7 +57,7 @@ def plot_broadband_esc(savefigs: bool, outdir: str):
 
     # Same plot, but with ERA5 interpolated to location
     # figname2 = outdir + "esc_broadband_with_era5.png"
-    # direc = "/Users/prowe/Sync/projects/NSF_AP/case_studies/Feb_2022/ERA5_at_stations/"
+    # direc = PROJ_DIR + "/NSF_AP/case_studies/Feb_2022/ERA5_at_stations/"
     # filename = "Escudero_SWD_LWD_Feb_06_10_era5.nc"
     # era_date, era_swd, era_lwd = read_era5_broadband_down(direc + filename)
     # ax1.plot(era_date, era_swd, ".", color="orange", label="ERA5")

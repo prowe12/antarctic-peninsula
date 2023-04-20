@@ -16,10 +16,13 @@ from matplotlib import pyplot as plt
 from load_pwrf import LoadPwrf, Pwrf
 from load_sonde import IgraSonde, DenialSonde, DenialSondePR
 
+# Parameter modules, specific to user
+from antarc.params import params
+
 
 # Base directories
-meas_dir = "/Users/prowe/Sync/measurements/"
-main_dir = "/Users/prowe/Sync/projects/NSF_AP/case_studies/"
+meas_dir = params.MEAS_DIR
+main_dir = params.PROJECT_DIR + "NSF_AP/case_studies/"
 
 plt.close("all")
 

@@ -6,14 +6,20 @@ Created on Mon Aug  1 14:20:11 2022
 @author: prowe
 """
 # # # # # # # # #    INPUTS   # # # # # # # # # #
+# Parameter modules - specific to user
+from antarc import params
+
+MEAS_DIR = params.MEAS_DIR
+PROJ_DIR = params.PROJECT_DIR
+
 # Directories
-main_dir = "/Users/prowe/Projects/NSF_AERI_cloud_CRI/McMurdo/case_studies/"
-yopp_dir = "/Users/prowe/Projects/YOPP/"
-CO2_DIR = "/Users/prowe/Sync/measurements/Escudero/co2/"
-SONDE_DIR = "/Users/prowe/Sync/measurements/Escudero/radiosondes/datadenial/"
-ERA_DIR = "/Users/prowe/Sync/measurements/Escudero/era5/"
-OUT_DIR = "/Users/prowe/Sync/measurements/Escudero/profiles/"
-FIG_DIR = "/Users/prowe/Sync/measurements/Escudero/profiles//figures/"
+main_dir = PROJ_DIR + "NSF_AERI_cloud_CRI/McMurdo/case_studies/"
+yopp_dir = PROJ_DIR + "YOPP/"
+CO2_DIR = MEAS_DIR + "Escudero/co2/"
+SONDE_DIR = MEAS_DIR + "Escudero/radiosondes/datadenial/"
+ERA_DIR = MEAS_DIR + "Escudero/era5/"
+OUT_DIR = MEAS_DIR + "Escudero/profiles/"
+FIG_DIR = MEAS_DIR + "Escudero/profiles//figures/"
 surfmet_dir = main_dir + "met/"
 
 # Filenames and formats

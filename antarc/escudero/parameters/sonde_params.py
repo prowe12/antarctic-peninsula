@@ -6,8 +6,14 @@ Created on Fri Jul  1 15:46:52 2022
 @author: prowe
 """
 
+# Parameter module, specific to user
+from antarc.params import params
+
+# Directories specific to user
+MEAS_DIR = params.MEAS_DIR
+
 # Directories
-SONDE_DIR = "/Users/prowe/Sync/measurements/Escudero/GRAW_radiosondes/"
+SONDE_DIR = MEAS_DIR + "Escudero/GRAW_radiosondes/"
 ORIG_DIRS = (
     SONDE_DIR + "simulation/eca53_profiles_simulation_2019run/",
     SONDE_DIR + "simulation/eca54_escudero_profiles_simulation2019/",
@@ -18,6 +24,6 @@ ORIG_DIRS = (
 )
 SAMPLEFNAME = "20220401120020047677_UPP_RAW_89056_2022040112.txt"
 
-STAND_DIR = "/Users/prowe/Sync/measurements/Escudero/radiosondes/datadenial/"
+STAND_DIR = MEAS_DIR + "Escudero/radiosondes/datadenial/"
 NO_QC_DIR = STAND_DIR + "noQC/"
 PREFIX_FOR_STANDFILE = "esc_sonde_dd_v1"

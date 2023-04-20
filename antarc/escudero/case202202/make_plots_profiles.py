@@ -84,12 +84,16 @@ def run_lblrtm_hires_rad(prof, dir_lblrtm, run_lblrtm, v1, v2, angle):
 
 # # # # # # # #      INPUTS      # # # # # # # # # # # # #
 
+# Parameter modules, specific to user
+from antarc.params import params
+
 # Parameter modules
 from antarc.escudero.parameters import radtran_params
 
-# Directories
-out_dir = "/Users/prowe/sync/measurements/Escudero/lwd/"
 
+# Directories
+out_dir = params.MEAS_DIR + "Escudero/lwd/"
+proj_dir = params.PROJECT_DIR
 
 # Flags
 do_run_clear_sky_sims = True
@@ -173,7 +177,7 @@ plt.subplot(122)
 plt.ylim([0, 15])
 plt.xlabel("RH (%)")
 
-out_dir = "/Users/prowe/Sync/projects/NSF_AP/case_studies/Feb_2022/figures/"
+out_dir = proj_dir + "NSF_AP/case_studies/Feb_2022/figures/"
 prof_figname = out_dir + "prof.png"
 if savefigs:
     plt.savefig(prof_figname)
