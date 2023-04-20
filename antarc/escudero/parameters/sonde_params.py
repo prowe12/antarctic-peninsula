@@ -7,7 +7,7 @@ Created on Fri Jul  1 15:46:52 2022
 """
 
 # Parameter module, specific to user
-from antarc.params import params
+from antarc import params
 
 # Directories specific to user
 MEAS_DIR = params.MEAS_DIR
