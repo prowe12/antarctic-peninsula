@@ -19,24 +19,24 @@ meas_dir = "/Users/prowe/Sync/measurements/"
 main_dir = "/Users/prowe/Sync/projects/NSF_AP/case_studies/"
 
 idate = 0  # 0 2 4 6
-year = 2018
+year = 2022
 dhour = 1.0
 
 if year == 2018:
     pwrfdir = "Dec_2018/pwrf_stations/"
     pwrf_date = "20181205_08"
     pwrf_date_fmt = "%Y%m%d_08"
-    esc_dir = meas_dir + "Escudero/radiosondes/datadenial/"
+    esc_dir = meas_dir + "Escudero/radiosondes/datadenial/v0/"
 
     esc_snd_files = [
-        "esc_sonde_dd_2018120523.txt",
-        "esc_sonde_dd_2018120612.txt",
-        "esc_sonde_dd_2018120614.txt",
-        "esc_sonde_dd_2018120617.txt",
-        "esc_sonde_dd_2018120623.txt",
-        "esc_sonde_dd_2018120723.txt",
-        "esc_sonde_dd_2018120823.txt",
-        "esc_sonde_dd_2018120923.txt",
+        "esc_sonde_dd_v0_2018120523.txt",
+        "esc_sonde_dd_v0_2018120612.txt",
+        "esc_sonde_dd_v0_2018120614.txt",
+        "esc_sonde_dd_v0_2018120617.txt",
+        "esc_sonde_dd_v0_2018120623.txt",
+        "esc_sonde_dd_v0_2018120723.txt",
+        "esc_sonde_dd_v0_2018120823.txt",
+        "esc_sonde_dd_v0_2018120923.txt",
     ]
     esc_date_strs = [
         "2018/12/05 23 UT",
@@ -48,6 +48,8 @@ if year == 2018:
         "2018/12/08 23 UT",
         "2018/12/09 23 UT",
     ]
+    esc_sndfile_fmt = "esc_sonde_dd_v0_%Y%m%d%H.txt"
+
 
 else:
     pwrfdir = "Feb_2022/pwrf_stations/"
@@ -56,11 +58,11 @@ else:
     esc_dir = meas_dir + "Escudero/radiosondes/datadenial/"
 
     esc_snd_files = [
-        "esc_sonde_dd_2022020700.txt",
-        "esc_sonde_dd_2022020712.txt",
-        "esc_sonde_dd_2022020800.txt",
-        "esc_sonde_dd_2022020823.txt",
-        "esc_sonde_dd_2022020912.txt",
+        "esc_sonde_dd_v1_2022020700.txt",
+        "esc_sonde_dd_v1_2022020712.txt",
+        "esc_sonde_dd_v1_2022020800.txt",
+        "esc_sonde_dd_v1_2022020823.txt",
+        "esc_sonde_dd_v1_2022020912.txt",
     ]
 
     esc_date_strs = [
@@ -70,9 +72,9 @@ else:
         "2022/02/08 23 UT",
         "2022/02/09 12 UT",
     ]
+    esc_sndfile_fmt = "esc_sonde_dd_v1_%Y%m%d%H.txt"
 
 
-esc_sndfile_fmt = "esc_sonde_dd_%Y%m%d%H.txt"
 pwrfdir = main_dir + pwrfdir
 esc_snd_file1 = esc_snd_files[idate]
 esc_date_str1 = esc_date_strs[idate]

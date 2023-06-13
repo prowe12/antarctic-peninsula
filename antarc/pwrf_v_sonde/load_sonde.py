@@ -97,22 +97,31 @@ class Sonde:
         plt.plot(pwrf.wspeed, sndht, ".-", label="sonde")
         plt.xlabel("Wind speed (m/s)")
 
-    def get_diffs(self, pwrf):
+    def get_diffs(self, level, temp, rhw, wspd):
         """
-        Interpolate onto sonde levels and then get differences from sonde
+        Interpolate model data (pwrf or era5) onto sonde levels and get
+        differences from model data and sonde
+        @param level  Pressure levels
+        @param temp  Temperatures
+        @param rhw  Relative Humidity
+        @param wspd  Wind speed
+        @return tdiff  Temperature differences
+        @return rhdiff  Relative humidity differences
+        @return wnddiff  Wind speed differences
         """
+        # Flip pressures so that they go from low to high
         # sonde levels (pressures)
         slev = np.flipud(self.lev)
 
         # PWRF levels (pressures)
-        plev = np.flipud(pwrf.level)
+        plev = np.flipud(level)
 
-        # Interpolate PWRF to sonde pressures, up to top of PWRF
+        # Flip then interpolate PWRF to sonde pressures, up to top of PWRF
         # itop = np.where(slev < min(plev))[0]
-
-        temp = np.interp(slev, plev, np.flipud(pwrf.temp))
-        rh = np.interp(slev, plev, np.flipud(pwrf.rh))
-        wind = np.interp(slev, plev, np.flipud(pwrf.wind))
+        temp = np.interp(slev, plev, np.flipud(temp))
+        rh = np.interp(slev, plev, np.flipud(rhw))
+        wind = np.interp(slev, plev, np.flipud(wspd))
+        # Flip them back to the original direction (high to low)
         temp = np.flipud(temp)
         rh = np.flipud(rh)
         wind = np.flipud(wind)
@@ -162,6 +171,18 @@ class Sonde:
 
 
 class IgraSonde(Sonde):
+    """
+    Get radiosounding data from IGRA file format.
+
+    Notes:
+        From the readme:
+            UWND: is the zonal wind component [(m/s) * 10] as computed from
+                  the reported wind speed and direction.
+            VWND: is the meridional wind component [(m/s) * 10] as computed
+                  from the reported wind speed and direction.
+
+    """
+
     def __init__(self, fdir, fname, ffmt):
         snd = pd.read_csv(fdir + fname, comment="#", delim_whitespace=True)
 
@@ -169,13 +190,47 @@ class IgraSonde(Sonde):
         self.temp = snd["TEMP"] / 10 - 273.15
         self.lev = snd["PRESS"] / 100
         self.rh = snd["CALCRH"] / 10
+        self.height = snd["CALCGPH"]
+
+        # wind speed is in m/s * 10
         self.wspeed = np.sqrt(
             (snd["UWND"] / 10) ** 2 + (snd["VWND"] / 10) ** 2
         )
-        self.height = snd["CALCGPH"]
 
         i = np.where(snd["UWND"] < 0)[0]
         i = np.intersect1d(i, np.where(snd["VWND"] < 0)[0])
+        self.wspeed[i] = np.nan
+
+
+class MbioSonde_txt(Sonde):
+    """
+    Marambio sonde files ending in '.txt'
+
+    Notes:
+        Header:
+    89055 Base Marambio Observations at 12Z 07 Feb 2022
+    --------------------------------------------------------------------------
+    PRES   HGHT   TEMP   DWPT   RELH   MIXR   DRCT   SKNT   THTA   THTE   THTV
+     hPa     m      C      C      %    g/kg    deg   knot     K      K      K
+    --------------------------------------------------------------------------
+    """
+
+    def __init__(self, fdir, fname, ffmt):
+        snd = pd.read_csv(
+            fdir + fname, skiprows=[0, 1, 3, 4, 5], delim_whitespace=True
+        )
+
+        self.dtime = dt.datetime.strptime(fname, ffmt)
+        self.temp = snd["TEMP"].values
+        self.lev = snd["PRES"].values
+        self.rh = snd["RELH"].values
+        self.height = snd["HGHT"].values
+
+        # convert wind speed knots -> m/s
+        self.wspeed = snd["SKNT"].values * 0.5144444444
+
+        i = np.where(snd["SKNT"] < 0)[0]
+        i = np.intersect1d(i, np.where(snd["SKNT"] < 0)[0])
         self.wspeed[i] = np.nan
 
 

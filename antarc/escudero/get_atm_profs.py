@@ -29,7 +29,7 @@ The atmospheric layer boundaries should be:
    This is obviously not the best way to do it, better would be to change
    DISORT to double precision.
 
-Output: A netcdf file (optionally also a pickle file and figures) with:
+Output: A netcdf file with:
     Dimensions: level
     Variables:
         time in hours since 0001-01-01 00:00:00 (scalar)
@@ -71,12 +71,13 @@ Variables:
 """
 
 # Dependencies
-import pickle
-import copy
 import datetime as dt
 import bisect
 import matplotlib.pyplot as plt
 import numpy as np
+from os.path import exists
+
+# import copy
 
 
 # My modules
@@ -84,7 +85,7 @@ from antarc.get_atm_profs_rsrc import get_files, FileInfo, Sonde, Era, Prof
 from antarc.get_atm_profs_rsrc import get_co2, CO2stationData, CarbonTracker
 
 
-def get_atm_profs(atm_prof_params, esc_params, esc_case):
+def get_atm_profs(atm_prof_params, esc_params, esc_case, redo: bool = True):
     """
     Get atmospheric profiles from sonde data, as well as ERA5, carbon tracker
     and surface co2 measurements, using imported parameters
@@ -111,13 +112,11 @@ def get_atm_profs(atm_prof_params, esc_params, esc_case):
 
     # Flags. The created profiles are always saved. These flags set whether to
     # also plot and save figures and pickled results.
-    PLOT_FIGS = True  # Flag specifiying whether to plot and save figures
-    PICKLE_IT = False  # Flag specifying whether to pickle results
+    plotfigs = True  # Flag specifiying whether to plot and save figures
 
     # # # # # # #     START MAIN CODE     # # # # # # #
 
     # Pad out dates by a few days
-    # TODO
     start_date = dt.datetime(
         start_date.year,
         start_date.month,
@@ -159,8 +158,10 @@ def get_atm_profs(atm_prof_params, esc_params, esc_case):
     iend = bisect.bisect_left(ords, end_ord)  # ords.index(end_ord)
 
     # Loop over radiosounding files, set profile, and save as netcdf file
-    # For debugging, remove loop and use:
     for sonde_file, sonde_date in sonde_file_n_dates[ibeg : iend + 1]:
+        # If the file exists, do not recreate it unless redo set to False
+        if not redo and exists(sonde_dir + sonde_file):
+            continue
 
         print("Working on", sonde_file)
         sonde = Sonde(sonde_dir, sonde_file, sonde_date)
@@ -196,29 +197,25 @@ def get_atm_profs(atm_prof_params, esc_params, esc_case):
         era.tack_on_60km(ctracker)  # Set values at 60 km, for interping
 
         prof = Prof(sonde, layerbnds)  # P, T, RH from sonde
-        prof.set_n_scale(
-            "co2", ctracker, co2_surf
-        )  # CO2 from flask measurements
-        prof.set("o3", era)  # Ozone from ERA-Interim
-        prof.set_upper("T", era)  # Upper T from ERA-Interim
+        prof.set_n_scale("co2", ctracker, co2_surf)  # CO2 from flask measmnts
+        prof.set("o3", era)  # Ozone from ERA
+        prof.set_upper("T", era)  # Upper T from ERA
         prof.set_upper("T", ctracker)  # Upmost T from carbonTracker
         prof.set_upper_spline("P", era)  # Upper P from ERA-Interim
         prof.h2o[prof.z >= 11.5] = 4.0  # Upmost H2o = 4 ppm
-        # if PLOT_FIGS:
+        # if plotfigs:
         #    profo = copy.deepcopy(prof)  # For plotting figures
-        # prof.set_surf_T(surfmetFiles, sonde.date)   # Set surface temperatures
+        # prof.set_surf_T(surfmetFiles, sonde.date)  # Set surface temperatures
         prof.model_extra = model_extra  # model for other molecs
 
         prof.error_check(era)  # Check for Nans, z, P
 
-        # Save the output as netcdf file (optional pickle file too)
+        # Save the output as netcdf file
         fname = out_dir + "prof" + prof.date.strftime("%Y%m%d_%H%m")
-        if PICKLE_IT:
-            pickle.dump(prof, open(fname + ".pickle", "wb"))
         prof.write_to_netcdf_file(fname + ".nc")
 
         # If specified, plot the results
-        if PLOT_FIGS:
+        if plotfigs:
             # zmet, Tmet = get_surface_T(surfmetFiles, sonde.date)
 
             # .. Make figures showing results

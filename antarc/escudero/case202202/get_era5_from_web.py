@@ -8,6 +8,7 @@ Created on Mon Aug  1 13:36:00 2022
 
 import cdsapi
 import numpy as np
+import datetime as dt
 
 from antarc.escudero.parameters import esc_params
 from antarc.escudero.parameters import esc202202
@@ -18,6 +19,9 @@ ALTITUDE = esc_params.ALTITUDE
 
 DATE1 = esc202202.DATE1
 DATE2 = esc202202.DATE2
+
+# Back up to the 4th
+DATE1 = dt.datetime(2022, 2, 2, 0, 0, tzinfo=dt.timezone.utc)
 
 
 outdir = "/Users/prowe/Sync/measurements/Escudero/era5/"
@@ -40,13 +44,51 @@ press_levs = [str(p) for p in press_levs_ints]
 
 # Times
 times = [f"0{i}:00" for i in range(10)] + [f"{i}:00" for i in range(10, 24)]
-dataset = "reanalysis-era5-pressure-levels"
 download_flag = True
 
 yearstr = str(DATE1.year)
 monthstr = str(DATE1.month).zfill(2)
 days = list(range(DATE1.day - 1, DATE2.day + 2))  # pad out a day on each side
 
+# Get downwelling shortwave and longwave fluxes
+dataset = "reanalysis-era5-single-levels"
+c = cdsapi.Client()
+for day in days[:3]:
+    daystr = str(day).zfill(2)
+    outfile = "era5_esc_broadband_202202" + daystr + ".nc"
+
+    # api parameters:
+    # area: [north, west, south, east]; west is negative
+    params = {
+        "format": "netcdf",
+        "product_type": "reanalysis",
+        "variable": [
+            "surface_net_solar_radiation",
+            "surface_net_solar_radiation_clear_sky",
+            "surface_net_thermal_radiation",
+            "surface_net_thermal_radiation_clear_sky",
+            "surface_solar_radiation_downward_clear_sky",
+            "surface_solar_radiation_downwards",
+            "surface_thermal_radiation_downward_clear_sky",
+            "surface_thermal_radiation_downwards",
+        ],
+        "year": [yearstr],
+        "month": [monthstr],
+        "day": [daystr],
+        "time": times,
+        "grid": [0.25, 0.25],
+        "area": [north, west, south, east],
+    }
+    # retrieves the path to the file
+    fl = c.retrieve(dataset, params)
+    # download the file
+    if download_flag:
+        fl.download(outdir + outfile)
+
+# TODO: delete following line
+dataset = "reanalysis-era5-pressure-levels"
+download_flag = False
+# Get met variables for pressure levels
 c = cdsapi.Client()
 for day in days[1:]:
     daystr = str(day).zfill(2)

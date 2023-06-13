@@ -13,7 +13,7 @@ from antarc.escudero.parameters import esc202202
 from antarc.get_era5_from_web import get_paramsets, get_era5
 
 # Parameter modules, specific to user
-from antarc.params import params
+from antarc import params
 
 
 LATITUDE = esc_params.LATITUDE

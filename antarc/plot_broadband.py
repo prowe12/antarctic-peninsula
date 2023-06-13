@@ -30,17 +30,42 @@ def plot_broadband(fnames_swd, fnames_lwd, ax1, ax2):
         #     np.where(np.isfinite(rad))[0], np.where(np.isfinite(nsamples))[0]
         # )
 
-        # Get the date and add 3 hours because of UTC offset
+        # Get the date
         mydates = [
             dt.datetime.strptime(x, "%Y-%m-%d %H:%M:%S") for x in dates_str
         ]
 
+        # Get the hourly averages
+        radsum = 0
+        naves = 0
+        hour = mydates[0].hour
+        dateave = []
+        radave = []
+        for i, mydate in enumerate(mydates):
+            if mydate.hour == hour:
+                radsum += rad[i]
+                naves += 1
+            else:
+                dt0 = mydates[i - 1]
+                thisdate = dt.datetime(
+                    dt0.year, dt0.month, dt0.day, dt0.hour, 30, 30
+                )
+                dateave.append(thisdate)
+                radave.append(radsum / naves)
+                hour = mydate.hour
+                radsum = rad[i]
+                naves = 1
+
         if firsttime:
-            ax1.plot(mydates, rad, "b", label="measured")
+            ax1.plot(
+                dateave, radave, "b", linewidth=8, label="measured, hourly ave"
+            )
+            ax1.plot(mydates, rad, "c", label="measured")
             ax1.set_ylabel("Downward Shortwave (W/m$^{2}$)")
             firsttime = False
         else:
-            ax1.plot(mydates, rad, "b")
+            ax1.plot(dateave, radave, "b", linewidth=8)
+            ax1.plot(mydates, rad, "c")
 
     # Add on the longwave
     firsttime = True
@@ -61,14 +86,38 @@ def plot_broadband(fnames_swd, fnames_lwd, ax1, ax2):
         #     np.where(np.isfinite(rad))[0], np.where(np.isfinite(nsamples))[0]
         # )
 
-        # Get the date and add 3 hours because of UTC offset
+        # Get the date
         mydates = [
             dt.datetime.strptime(x, "%Y-%m-%d %H:%M:%S") for x in dates_str
         ]
 
+        # Get the hourly averages
+        radsum = 0
+        naves = 0
+        hour = mydates[0].hour
+        dateave = []
+        radave = []
+        for i, mydate in enumerate(mydates):
+            if mydate.hour == hour:
+                radsum += rad[i]
+                naves += 1
+            else:
+                dt0 = mydates[i - 1]
+                thisdate = dt.datetime(
+                    dt0.year, dt0.month, dt0.day, dt0.hour, 30, 30
+                )
+                dateave.append(thisdate)
+                radave.append(radsum / naves)
+                hour = mydate.hour
+                radsum = rad[i]
+                naves = 1
+
         if firsttime:
-            ax2.plot(mydates, rad, "b", label="measured")
+            ax2.plot(dateave, radave, "b", linewidth=8)
+            ax2.plot(mydates, rad, "c")
             ax2.set_ylabel("Downward Longwave (W/m$^{2}$)")
             firsttime = False
+
         else:
-            ax2.plot(mydates, rad, "b")
+            ax2.plot(dateave, radave, "b", linewidth=8)
+            ax2.plot(mydates, rad, "c")

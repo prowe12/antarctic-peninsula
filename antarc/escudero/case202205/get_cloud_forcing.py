@@ -6,6 +6,58 @@ Created on Wed Aug  3 08:56:46 2022
 @author: prowe
 
 Purpose: Plot broadband radiation at Escudero on 2022/02
+
+
+Steps for Analysis:
+
+The user must create a file called params.py within the git repo
+antarctic_peninsula/antarc/. This file is ignored by git, since it is
+unique to each compuater. In params.py, set the measurement directory 
+for the computer, e.g. MEAS_DIR = "/my-user-path/measurements"
+In the description that follows, params.MEAS_DIR is referred to as measdir
+
+Steps indicated with asterisks are performed in this code. Other steps
+must be performed manually or using other code before running this code, 
+as indicated.
+
+A) Collect the data and put it in the directories within 'measdir/Escudero/'
+  1)  LWD (Longwave downward radiation): pyranometer/orig_v1. (Do manually)
+  2)  SWD (Shortwave downward radiation): pyrgeometer/orig_v2 (Do manually)
+  3)  Sonde: GRAW_radiosondes/simulation/yopp2022_escudero_profiles (Manually)
+  4*) ERA5: era5/; Downloaded using /antarctic_peninsula/antarc/escudero/
+      get_era5_from_web.py (done here; see code below)
+  5)  CO2: co2/; See readme_carbontracker.rtf, readme_co2_surface_flask.rtf,
+      and readme_co2_noaa_esrl.rtf (Manually)
+
+B) Convert raw data files into standardized data files, using code in 
+   antarctic_peninsula/antarc/escudero/get_stand_files:
+  1)  LWD: pyr_save_stand_files_lwd.py, uses antarc.pyr_save_stand_files and
+      antarc/escudero/parameters/lwd_orig_params.py. Results are saved in 
+      measdir/Escudero/pyranometer/stand/yyyy/. (Do before running this code)
+  2)  SWD: pyr_save_stand_files_swd.py, uses antarc.pyr_save_stand_files and
+      antarc/escudero/parameters/swd_orig_params. Results are saved in in
+      measdir/Escudero/pyrgeometer/stand/yyyy/ (Do before running this code)
+  3*) Sonde: sonde_raw_to_data_denial_format.py. Results are saved in
+      measdir/measurements/Escudero/radiosondes/datadenial. (done here)
+  4)  ERA5: These files are left in their original format. (Nothing to do)
+  5)  CO2: These files are left in their original format. (Nothing to do)
+
+C) Longwave:
+  1)  Requires steps A1, A3, A4, A5, B1, and B3 above.
+  2*) get_atm_profs.py: Create atmospheric profiles from radiosondes and 
+      ancillary data (done here; see below)
+  3*) Do LBLRTM runs to get clear-sky fluxes. These go in to lwd_clear directory.
+      (Done here using get_clear_fluxes.)
+  4*) Load in the lwd measurements and the clear sky files (done here)
+  5*) Subtract cloudy and clear-sky fluxes to get LW forcing (done here)
+
+D) Shortwave:
+  1*) Load pyranometer data using get_obs_swd (done here)
+  2*) Dompute clear-sky SWD flux using get_libradtran (done here)
+  3*) Subtract cloudy and clear-sky fluxes to get SW forcing (done here)
+
+E) miniMPL: Please see the repos mpl2nc and mpl-processing.
+
 """
 
 # Dependencies
@@ -21,6 +73,7 @@ from antarc.escudero.get_era5_from_web import get_era5_from_web
 from antarc.escudero.case202205.make_plots import plot_measured_and_clear
 from antarc.escudero.case202205.make_plots import plot_forcings
 from antarc.escudero.case202205.make_plots import plot_meas_clear_forcings
+from antarc.escudero.case202205.make_plots import plot_forcings_and_lidar
 
 
 # Parameter modules specific to the user: the user must create params.py
@@ -42,34 +95,26 @@ out_dir = params.PROJECT_DIR + "case_studies/May_2022/figures/"
 # Run flags
 SAVEFIGS = True
 REDO = False  # redo calculations even if they already exist
+# redo_profs = False
 
 date1 = esc_case.DATE1
 date2 = esc_case.DATE2
 
-# B4) Get ERA5 data
+
+# A5) Get ERA5 data if it is not found or if REDO=TRUE
 get_era5_from_web(esc_params, esc_case, REDO)
 
 # C) Longwave
 # C2) Create the atmospheric profiles
-# TODO: Add a "redo" option here, and an option to suppress making plots
-get_atm_profs(atm_prof_params, esc_params, esc_case)
+get_atm_profs(atm_prof_params, esc_params, esc_case, REDO)
+
 
 # C3)
 # Check for the clear-sky lwd fluxes and if the files have not been made,
 # create them. We expect one per profile
-# dir_prof = "/Users/prowe/sync/measurements/Escudero/profiles/"
-# samplefile = "prof20220514_1205.nc"
-# fmt = "prof%Y%m%d_%H%M.nc"
-# lwdfmt = "flux%Y%m%d_%H%M_1500_2222.txt"
-# allfiles = os.listdir(dir_prof)
-# files = []
-# for file in allfiles:
-#     if len(file) == len(samplefile) and file[:4] == samplefile[:4]:
-#         pfile = dt.strptime(file, fmt).stftime(lwdfmt)
-#         lwdfile = f"{dir_lwdclear}{pfile}"
 get_clear_fluxes(dir_lwdclear, radtran_params, (date1, date2), 3, REDO)
 
-# C4) Load in measd LWD and  clear sky files created in previous step
+# C4) Load in measured LWD and clear sky files created in previous step
 lwd_date, lwd = get_lwd(lwd_params, date1, date2)
 lwd_clear_date, lwd_clear = get_lwd_clear(esc_case, lwd_params)
 lwd_tstamp = [x.timestamp() for x in lwd_date]
@@ -79,23 +124,6 @@ lwd_clear_interp = np.interp(lwd_tstamp, lwd_clear_tstamp, lwd_clear)
 
 # C5) Subtract cloudy and clear-sky fluxes to get LW forcing
 lwd_force = lwd - lwd_clear_interp
-
-# # Cumulative forcing for LWD
-# # dt.datetime(fdate.year, fdate.month, fdate.day, fdate.hour + 1, 0)
-# i1 = np.where(np.array(lwd_tstamp) >= start_date.timestamp())[0][0]
-# i2 = np.where(np.array(lwd_tstamp) <= final_date.timestamp())[0][-1] + 1
-# ntimes = i2 - i1
-# lwf_tot = np.zeros([ntimes])
-# lwf_tot_mwh = np.zeros([ntimes])
-# count = 0
-# for i in range(i1, i2):
-#     lwf = lwd_force[i] * (lwd_tstamp[i] - lwd_tstamp[i - 1])
-#     lwf_mwh = lwd_force[i] * (lwd_tstamp[i] - lwd_tstamp[i - 1]) / 3600 / 1000
-#     lwf_tot[count] = lwf_tot[count - 1] + lwf
-#     lwf_tot_mwh[count] = lwf_tot_mwh[count - 1] + lwf_mwh
-#     count += 1
-# il1 = i1
-# il2 = i2
 
 
 # D) SWD
@@ -128,56 +156,77 @@ start_date = swd_date[1900]
 final_date = swd_date[-1]
 
 
-plot_measured_and_clear(
-    swd_date,
-    swd,
-    swd_clear,
-    lwd_date,
-    lwd,
-    lwd_clear_date,
-    lwd_clear,
-    SAVEFIGS,
-    out_dir + "lwd_swd_202205_10_17.eps",
-)
+# plot_measured_and_clear(
+#     swd_date,
+#     swd,
+#     swd_clear,
+#     lwd_date,
+#     lwd,
+#     lwd_clear_date,
+#     lwd_clear,
+#     SAVEFIGS,
+#     out_dir + "lwd_swd_202205_10_17.eps",
+# )
 
-plot_meas_clear_forcings(
-    swd_date,
-    swd,
-    swd_clear,
-    swd_force,
-    lwd_date,
-    lwd,
-    lwd_clear_date,
-    lwd_clear,
-    lwd_force,
-    SAVEFIGS,
-    out_dir + "lwd_swd_forcing_202205_10_17.eps",
-    start_date,
-    final_date,
-)
+# plot_meas_clear_forcings(
+#     swd_date,
+#     swd,
+#     swd_clear,
+#     swd_force,
+#     lwd_date,
+#     lwd,
+#     lwd_clear_date,
+#     lwd_clear,
+#     lwd_force,
+#     SAVEFIGS,
+#     out_dir + "lwd_swd_forcing_202205_10_17.eps",
+#     start_date,
+#     final_date,
+# )
 
-plot_forcings(
-    swd_date,
-    swd,
-    swd_clear,
-    swd_force,
-    lwd_date,
-    lwd,
-    lwd_clear_date,
-    lwd_clear,
-    lwd_force,
-    start_date,
-    final_date,
-    "%d",
-    "2022/05/16",
-    SAVEFIGS,
-    out_dir + "forcing_202205_10_17.eps",
-)
+# plot_forcings(
+#     swd_date,
+#     swd,
+#     swd_clear,
+#     swd_force,
+#     lwd_date,
+#     lwd,
+#     lwd_clear_date,
+#     lwd_clear,
+#     lwd_force,
+#     start_date,
+#     final_date,
+#     "%d",
+#     "2022/05/16",
+#     SAVEFIGS,
+#     out_dir + "forcing_202205_10_17.eps",
+# )
 
-# For this plot, manually change the xlabel in plot_forcings
+# Plot the forcing for just 2022/05/16
+# start_date = dt.datetime(2022, 5, 16)
+# final_date = swd_date[-1]
+# plot_forcings(
+#     swd_date,
+#     swd,
+#     swd_clear,
+#     swd_force,
+#     lwd_date,
+#     lwd,
+#     lwd_clear_date,
+#     lwd_clear,
+#     lwd_force,
+#     start_date,
+#     final_date,
+#     "%H",
+#     "Hour on 2022/05/16",
+#     SAVEFIGS,
+#     out_dir + "forcing_20220516.eps",
+# )
+
+# Plot the forcing and the lidar data for 2022/05/16
 start_date = dt.datetime(2022, 5, 16)
 final_date = swd_date[-1]
-plot_forcings(
+plot_forcings_and_lidar(
     swd_date,
     swd,
     swd_clear,

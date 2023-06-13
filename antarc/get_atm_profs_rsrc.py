@@ -837,7 +837,7 @@ class Era:
     Get profile information from ERA data
     """
 
-    __slots__ = ("P", "T", "o3", "rh", "z")
+    __slots__ = ("P", "T", "o3", "rh", "z", "uwind", "vwind")
 
     def __init__(self, eraFiles, era_fileformat, date, lat, lon):
         """
@@ -878,10 +878,13 @@ class Era:
                 "r": "%",
                 "z": "m**2 s**-2",
                 "o3": "kg kg**-1",
+                "u": "m s**-1",
+                "v": "m s**-1",
             }
 
             for exptd in expectedvars:
                 if exptd not in nci.variables.keys():
+                    print(f"For file {fname}")
                     raise NameError(
                         "Expected variable in ERA file missing: " + exptd
                     )
@@ -890,6 +893,8 @@ class Era:
                     msg2 = exptd + ", but got " + nci[exptd].units
                     raise ValueError(msg1 + msg2)
 
+            umat = nci["u"][:]
+            vmat = nci["v"][:]
             tmat = nci["t"][:]
             o3mat = nci["o3"][:]
             rhmat = nci["r"][:]
@@ -899,12 +904,16 @@ class Era:
             ozone = map_interp(o3mat, date, lat, lon, dates, lats, lons)
             rhw = map_interp(rhmat, date, lat, lon, dates, lats, lons)
             height = map_interp(zmat, date, lat, lon, dates, lats, lons)
+            uwind = map_interp(umat, date, lat, lon, dates, lats, lons)
+            vwind = map_interp(vmat, date, lat, lon, dates, lats, lons)
 
             self.P = nci["level"][:]
             self.T = temp
             self.o3 = ozone * 1000  # kg/kg * 1000 g/kg => g/kg
             self.rh = rhw
             self.z = height
+            self.uwind = uwind
+            self.vwind = vwind
 
         # Interpolate to location of Escudero
         # import pandas as pd

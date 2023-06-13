@@ -26,6 +26,8 @@ def get_params(datestr: list[str], times, latlon, press_levs):
             "Temperature",
             "Relative humidity",
             "Ozone mass mixing ratio",
+            "u_component_of_wind",
+            "v_component_of_wind",
         ],
         "pressure_level": press_levs,
         "year": [datestr[0]],

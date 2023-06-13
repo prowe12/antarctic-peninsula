@@ -1,12 +1,3 @@
-#  ... This file contains inputs from the namelist file
-#      "disortinput.nml" in order to perform a sample run
-#      of DISORT using Python.
-#
-#      The results should be comparable to the results
-#      from running DISORT using matlab and python
-
-# You may need to set the path as follows (change the beginning
-# as needed for your directory structure):
 """
 Created on Tue Oct 29 13:04:15 2019
 
@@ -85,7 +76,7 @@ def run_lblrtm_hires_rad(prof, dir_lblrtm, run_lblrtm, v1, v2, angle):
 # # # # # # # #      INPUTS      # # # # # # # # # # # # #
 
 # Parameter modules, specific to user
-from antarc.params import params
+from antarc import params
 
 # Parameter modules
 from antarc.escudero.parameters import radtran_params
