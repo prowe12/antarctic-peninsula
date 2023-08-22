@@ -67,9 +67,9 @@ import numpy as np
 # My modules
 from antarc.run_radtran import get_clear_fluxes
 from antarc.escudero.get_lwd_flux import get_lwd, get_lwd_clear
-from antarc.escudero.get_atm_profs import get_atm_profs
 from antarc.escudero.get_swd_flux import get_obs_swd, get_libradtran
 from antarc.escudero.get_era5_from_web import get_era5_from_web
+from antarc.escudero.case202205.get_atm_profs import get_atm_profs
 from antarc.escudero.case202205.make_plots import plot_measured_and_clear
 from antarc.escudero.case202205.make_plots import plot_forcings
 from antarc.escudero.case202205.make_plots import plot_meas_clear_forcings

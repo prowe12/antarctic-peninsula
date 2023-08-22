@@ -7,7 +7,7 @@ Created on Tue Apr 18 10:48:09 2023
 """
 
 # Modules
-from antarc.escudero.get_atm_profs import get_atm_profs
+from antarc.escudero.case202202.get_atm_profs import get_atm_profs
 
 # Parameter modules
 from antarc.escudero.parameters import esc_params, atm_prof_params
