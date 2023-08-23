@@ -11,7 +11,7 @@ import numpy as np
 import datetime as dt
 
 
-def plot_broadband(fnames_swd, fnames_lwd, ax1, ax2):
+def plot_shortwave_broadband(fnames_swd, ax1):
     firsttime = True
     for filename in fnames_swd:
 
@@ -67,6 +67,10 @@ def plot_broadband(fnames_swd, fnames_lwd, ax1, ax2):
             ax1.plot(dateave, radave, "b", linewidth=8)
             ax1.plot(mydates, rad, "c")
 
+    ax1.legend()
+
+
+def plot_longwave_broadband(fnames_lwd, ax2):
     # Add on the longwave
     firsttime = True
     for filename in fnames_lwd:
@@ -121,3 +125,8 @@ def plot_broadband(fnames_swd, fnames_lwd, ax1, ax2):
         else:
             ax2.plot(dateave, radave, "b", linewidth=8)
             ax2.plot(mydates, rad, "c")
+
+
+def plot_broadband(fnames_swd, fnames_lwd, ax1, ax2):
+    plot_shortwave_broadband(fnames_swd, ax1)
+    plot_longwave_broadband(fnames_lwd, ax2)
