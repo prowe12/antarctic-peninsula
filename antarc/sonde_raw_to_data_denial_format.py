@@ -17,6 +17,8 @@ from time import strptime, strftime
 from os.path import exists
 import numpy as np
 from matplotlib import pyplot as plt
+import re
+
 
 # My modules
 from antarc.get_atm_profs_rsrc import get_files, Sonde
@@ -119,6 +121,8 @@ def qc_burst(met: np.ndarray, ialt: int, ipress: int):
     @param ipress  Index to column with pressures
     @returns  The profile data up to the burst height
     """
+    # Get indices to the location in the array of the maximum altitude
+    # and the minimum pressure.  Ideally these would both be at the burst.
     imaxalt = np.where(met[:, ialt] == max(met[:, ialt]))[0]
     iminp = np.where(met[:, ipress] == min(met[:, ipress]))[0]
 
@@ -129,8 +133,7 @@ def qc_burst(met: np.ndarray, ialt: int, ipress: int):
             return met
 
         if abs(imaxalt - iminp)[0] < 6:
-            # If they are length 1, and close, end the sounding
-            # at lowest
+            # If they are length 1, and close, end sounding at lowest
             met = met[: min(imaxalt, iminp)[0] + 1, :]
             return met
 
@@ -159,8 +162,262 @@ def qc_burst(met: np.ndarray, ialt: int, ipress: int):
     return met
 
 
+def get_cols_esc_eca53_54():
+    """
+    Header information for GRAW raw radiosonde data measured during
+    ECA53, ECA54, and ECA55
+    """
+
+    # Expected columns of the file
+    cols = [
+        "Time",  # 0
+        "P",  # 1
+        "T",  # 2
+        "Hu",  # 3
+        "Ws",  # 4
+        "Wd",  # 5
+        "Long.",  # 6
+        "Lat.",  # 7
+        "Alt",  # 8
+        "Geopot",  # 9
+        "MRI",  # 10
+        "RI",  # 11
+        "Dewp.",  # 12
+        "Virt. Temp",
+        "Rs",
+        "Elevation",
+        "Azimuth",
+        "Range",
+        "D",
+    ]
+
+    # Expected units of the file
+    # MRI and RI do not have units
+    units = [
+        "[sec]",  # 0, time
+        "[hPa]",  # 1, press
+        "[°C]",  # 2, temp
+        "[%]",  # 3, rhw
+        "[kn]",  # 4, wspd
+        "[°]",  # 5, wdir
+        "[°]",  # 6, long
+        "[°]",  # 7, lat
+        "[m]",  # 8, alt
+        "[m]",  # 9, geopot
+        "[°C]",  # 10, dewpt
+        "[°C]",  # 11
+        "[m/s]",  # 12
+        "[°]",
+        "[°]",
+        "[m]",
+        "[kg/m3]",
+    ]
+
+    # Map the neccessary profile variables to the columns of the file
+    # the order is cols, units.  That is, the first index maps to the
+    # cols list, the second to the units list. Two sets are needed because
+    # units are missing for some columns
+    colmap = {
+        "time": [0, 0],
+        "press": [1, 1],
+        "alt": [8, 8],
+        "temp": [2, 2],
+        "rhw": [3, 3],
+        "dewpt": [12, 10],
+        "wspd": [4, 4],
+        "wdir": [5, 5],
+    }
+
+    return cols, units, colmap
+
+
+def get_cols_esc_eca55():
+    """
+    Header information for GRAW raw radiosonde data measured during
+    ECA55
+    """
+
+    # Expected columns of the file
+    cols = [
+        "Time",  # 0
+        "P",  # 1
+        "T",  # 2
+        "Hu",  # 3
+        "Ws",  # 4
+        "Wd",  # 5
+        "Long.",  # 6
+        "Lat.",  # 7
+        "Alt",  # 8
+        "Geopot",  # 9
+        "MRI",  # 10
+        "RI",  # 11
+        "Dewp.",  # 12
+        "Virt. Temp",
+        "Rs",
+        "D",
+    ]
+
+    # Expected units of the file
+    # MRI and RI do not have units
+    units = [
+        "[sec]",  # 0
+        "[hPa]",  # 1
+        "[°C]",  # 2
+        "[%]",  # 3
+        "[m/s]",  # 4
+        "[°]",  # 5
+        "[°]",  # 6
+        "[°]",  # 7
+        "[m]",  # 8
+        "[m]",  # 9
+        "[°C]",  # 10, dewpt
+        "[°C]",  # 11, virt temp (not used)
+        "[m/s]",  # 12, Rs (not used)
+        "[kg/m3]",  # 13, D (not used)
+    ]
+
+    # Map the neccessary profile variables to the columns of the file
+    colmap = {
+        "time": [0, 0],
+        "press": [1, 1],
+        "alt": [8, 8],
+        "temp": [2, 2],
+        "rhw": [3, 3],
+        "dewpt": [12, 10],
+        "wspd": [4, 4],
+        "wdir": [5, 5],
+    }
+
+    return cols, units, colmap
+
+
+def get_cols_esc_eca56():
+    """
+    Header information for GRAW raw radiosonde data measured during
+    ECA55
+    """
+
+    # Expected columns of the file
+    cols = [
+        "Time",  # 0
+        "P",  # 1
+        "T",  # 2
+        "Hu",  # 3
+        "Ws",  # 4
+        "Wd",  # 5
+        "Long.",  # 6
+        "Lat.",  # 7
+        "Alt",  # 8
+        "Geopot",  # 9
+        "O3",  # 10
+        "I",  # 11
+        "Ti",  # 12
+        "TO3",  # 13
+        "Dewp.",  # 14
+        "Virt. Temp",
+        "Rs",
+    ]
+
+    # Expected units of the file
+    units = [
+        "[sec]",  # 0
+        "[hPa]",  # 1
+        "[°C]",  # 2
+        "[%]",  # 3
+        "[kn]",  # 4
+        "[°]",  # 5
+        "[°]",  # 6
+        "[°]",  # 7
+        "[m]",  # 8
+        "[m]",  # 9
+        "[mPa]",  # 10
+        "[µA]",  # 11
+        "[°C]",  # 12
+        "DU",  # 13, TO3
+        "[°C]",  # 14, dewpt
+        "[°C]",  # 15
+        "[m/s]",  # 16
+    ]
+
+    # Map the neccessary profile variables to the columns of the file
+    colmap = {
+        "time": [0, 0],
+        "press": [1, 1],
+        "alt": [8, 8],
+        "temp": [2, 2],
+        "rhw": [3, 3],
+        "dewpt": [14, 14],
+        "wspd": [4, 4],
+        "wdir": [5, 5],
+    }
+
+    return cols, units, colmap
+
+
+def get_cols_esc_yopp2022():
+    """
+     @return  Column headings and units
+     Time P  T   Hu  Ws  	Wd Long. Lat.   Alt  Geopot Dewp. Virt. Temp 	Rs
+    [sec] [hPa]  [∞C]  [%]   [kn]	[∞] [∞] 	[∞] 	[m]  [m]   [∞C] 	[∞C]  [m/s]
+    """
+
+    cols = [
+        "Time",  # 0
+        "P",  # 1
+        "T",  # 2
+        "Hu",  # 3
+        "Ws",  # 4
+        "Wd",  # 5
+        "Long.",  # 6
+        "Lat.",  # 7
+        "Alt",  # 8
+        "Geopot",  # 9
+        "Dewp.",  # 10
+        "Virt. Temp",
+        "Rs",
+    ]
+
+    units = [
+        "[sec]",  # 0
+        "[hPa]",  # 1
+        "[°C]",  # 2
+        "[%]",  # 3
+        "[kn]",  # 4, wspd
+        "[°]",  # 5, wdir
+        "[°]",  # 6
+        "[°]",  # 7
+        "[m]",  # 8
+        "[m]",  # 9
+        "[°C]",  # 10
+        "[°C]",
+        "[m/s]",
+    ]
+
+    colmap = {
+        "time": [0, 0],
+        "press": [1, 1],
+        "alt": [8, 8],
+        "temp": [2, 2],
+        "rhw": [3, 3],
+        "dewpt": [10, 10],
+        "wspd": [4, 4],
+        "wdir": [5, 5],
+    }
+
+    return cols, units, colmap
+
+
 def graw_raw_to_datadenial(
-    input_dir, output_dir, sample_file, location, lat, lon, height
+    input_dir: str,
+    output_dir: str,
+    sample_file: str,
+    location,
+    lat,
+    lon,
+    height,
+    cols,
+    units,
+    colmap,
 ):
     """
     Convert the GRAW-format radiosounding file into the format for the
@@ -237,59 +494,56 @@ def graw_raw_to_datadenial(
     iyear = 5
     itime = 8
 
-    # For the column labels, the whitespace seems to vary for unknown reasons
-    # e.g.
-    # 'Time                    \tP                      \tT
-    #        \tHu                 \tWs  \tWd               \tLong.       \tLat.
-    #        \tAlt    \tGeopot        \tDewp.\tVirt. Temp \tRs\n'
-    # vs
-    # 'Time                    	P                      	T
-    #       	Hu                 	Ws  	Wd               	Long.       	Lat.
-    #             	Geopot        	Dewp.	Virt. Temp 	Rs
-    # therefore we will remove the whitespace before comparison
-    # And similarly for units, since sometimes the degree sign is rendered as
-    # an infinity sign:
-    # '[sec]                   \t[hPa]                  \t[°C]
-    #        \t[%]                \t[kn]\t[°]              \t[°]         \t[°]
-    #        \t[m]    \t[m]           \t[°C] \t[°C]       \t[m/s]\n'
-    # '[sec]                   	[hPa]                  	[∞C]
-    #       	[%]                	[kn]	[∞]              	[∞]         	[∞]
-    #             	[m]           	[∞C] 	[∞C]       	[m/s]'
-    cols = [
-        "Time",
-        "P",
-        "T",
-        "Hu",
-        "Ws",
-        "Wd",
-        "Long.",
-        "Lat.",
-        "Alt",
-        "Geopot",
-        "Dewp.",
-        "Virt.",
-        "Temp",
-        "Rs",
-    ]
+    # # For the column labels, the whitespace seems to vary for unknown reasons
+    # # e.g.
+    # # 'Time                    \tP                      \tT
+    # #        \tHu                 \tWs  \tWd               \tLong.       \tLat.
+    # #        \tAlt    \tGeopot        \tDewp.\tVirt. Temp \tRs\n'
+    # # vs
+    # # 'Time                    	P                      	T
+    # #       	Hu                 	Ws  	Wd               	Long.       	Lat.
+    # #             	Geopot        	Dewp.	Virt. Temp 	Rs
+    # # therefore we will remove the whitespace before comparison
+    # # And similarly for units, since sometimes the degree sign is rendered as
+    # # an infinity sign:
+    # # '[sec]                   \t[hPa]                  \t[°C]
+    # #        \t[%]                \t[kn]\t[°]              \t[°]         \t[°]
+    # #        \t[m]    \t[m]           \t[°C] \t[°C]       \t[m/s]\n'
+    # # '[sec]                   	[hPa]                  	[∞C]
+    # #       	[%]                	[kn]	[∞]              	[∞]         	[∞]
+    # #             	[m]           	[∞C] 	[∞C]       	[m/s]'
+    # cols = [
+    #     "Time",
+    #     "P",
+    #     "T",
+    #     "Hu",
+    #     "Ws",
+    #     "Wd",
+    #     "Long.",
+    #     "Lat.",
+    #     "Alt",
+    #     "Geopot",
+    #     "Dewp.",
+    #     "Virt.",
+    #     "Temp",
+    #     "Rs",
+    # ]
 
-    units = [
-        "[sec]",
-        "[hPa]",
-        "[°C]",
-        "[%]",
-        "[kn]",
-        "[°]",
-        "[°]",
-        "[°]",
-        "[m]",
-        "[m]",
-        "[°C]",
-        "[°C]",
-        "[m/s]",
-    ]
-
-    # Indices to units that are always consistent across files (so far)
-    iunit = [0, 1, 3, 4, 8, 9, 12]
+    # units = [
+    #     "[sec]",
+    #     "[hPa]",
+    #     "[°C]",
+    #     "[%]",
+    #     "[kn]",
+    #     "[°]",
+    #     "[°]",
+    #     "[°]",
+    #     "[m]",
+    #     "[m]",
+    #     "[°C]",
+    #     "[°C]",
+    #     "[m/s]",
+    # ]
 
     # Thresholds for quality control
     verbose = False
@@ -380,18 +634,41 @@ def graw_raw_to_datadenial(
             i += 1
 
         # Skip two lines, which are the column labels and the units.
-        # First, make sure they are as expected
-        if lines[i].split() != cols:
+        # First, make sure they are as expected.
+        # Require 2+ spaces between words
+        # if re.split(r"\s{2,}", lines[i]) != cols:
+        file_cols = [x.strip() for x in lines[i].split("\t")]
+
+        if file_cols != cols:
+            # file_col = re.split(r"\s{2,}", lines[i])
             logmsg = (
-                genmsg + f": Columns differ: {lines[i].split()}, moving on"
+                genmsg
+                + f": Columns differ; file has:\n{file_cols} \n\nnot\n\n{cols}"
             )
+            # ", moving on"
+            raise ValueError(logmsg)
             print(logmsg, file=lid)
             continue
         i += 1
-        if any((lines[i].split()[j] != units[j] for j in iunit)):
-            msg = f"On file {input_file}, the units changed. Check file."
-            msg2 = f"\n{lines[i]}"
+        # if any(lines[i].split()[j] != units[j] for j in iunit):
+
+        file_units = lines[i].split()
+        if file_units != units:
+            msg = f"On file {input_file}, the units are:\n"
+            msg2 = f"\n{file_units}\n\nbut should be\n\n{units}"
             raise ValueError(msg + msg2)
+
+        # Check if wind speed will need to be converted from m/s to knots
+        # For this we use index 1 of the column map, which corresponds to
+        # units (0 corresponds to column values)
+        if file_units[colmap["wspd"][1]] == "[m/s]":
+            wspd_mps_to_knots = True
+        elif file_units[colmap["wspd"][1]] == "[kn]":
+            wspd_mps_to_knots = False
+        else:
+            print(f"Units are: {file_units[colmap['wspd'][1]]}")
+            raise ValueError("Bad value for units!")
+
         i += 1
 
         hourstr = f"{launchhour:02}"
@@ -404,8 +681,6 @@ def graw_raw_to_datadenial(
         print(logmsg, file=lid)
         if verbose:
             print(logmsg)
-
-        # press_prev = 2000
 
         nlevs = len(lines[i:])
         # time_s, press, alt, temp, rhw, dewpt, wdir, wspd
@@ -425,16 +700,25 @@ def graw_raw_to_datadenial(
             # Get the columns
             columns = line.split()
 
+            # Wind speed is sometimes m/s but needs to be knots
+            # The boolean wspd_mps_to_knots, set above, determines if
+            # the conversion is needed
+            # Recall that the index 0 here gets the index to the columns
+            # for the values rather than the units (index 1)
+            wspd = float(columns[colmap["wspd"][0]])
+            if wspd_mps_to_knots:
+                wspd *= 1.9438445
+
             # time_s, press, alt, temp, rhw, dewpt, wdir, wspd
             met[j, :] = [
-                start_time_s + float(columns[0]),  # 0:time
-                float(columns[1]),  # 1: press
-                float(columns[8]),  # 2: alt
-                float(columns[2]),  # temp
-                float(columns[3]),  # rhw
-                float(columns[10]),  # dewpt
-                float(columns[5]),  # wdir
-                float(columns[4]),  # wspd
+                start_time_s + float(columns[colmap["time"][0]]),
+                float(columns[colmap["press"][0]]),
+                float(columns[colmap["alt"][0]]),
+                float(columns[colmap["temp"][0]]),
+                float(columns[colmap["rhw"][0]]),
+                float(columns[colmap["dewpt"][0]]),
+                float(columns[colmap["wdir"][0]]),
+                wspd,
             ]
 
         # Remove extra values
@@ -464,17 +748,19 @@ def graw_raw_to_datadenial(
                 dewpt_wdir_spd = dewstr.format(met[k, 5], met[k, 6], met[k, 7])
                 print(hhmmss + p_z_t_rh + dewpt_wdir_spd, file=noqc)
 
-        # # Uncomment to create a plot for QC
-        # # Get the minimum pressure and the maximum altitude
+        # Uncomment to create a plot for QC
+        # Get the minimum pressure and the maximum altitude
         # iminp = np.where(met[:, ipress] == min(met[:, ipress]))[0]
         # imaxalt = np.where(met[:, ialt] == max(met[:, ialt]))[0]
-
         # plt.figure(1)
         # plt.plot(met[:, ipress], met[:, ialt])
         # plt.plot(met[imaxalt, ipress], met[imaxalt, ialt], "*")
         # plt.plot(met[iminp, ipress], met[iminp, ialt], "*")
+        # plt.xlabel("Pressure")
+        # plt.ylabel("Altitude")
 
         # Chop off values above the burst height
+        print(output_file)
         met = qc_burst(met, ialt, ipress)
 
         # Check if pressures monotonically decreasing or same

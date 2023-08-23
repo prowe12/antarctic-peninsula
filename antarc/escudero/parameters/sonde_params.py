@@ -17,10 +17,12 @@ SONDE_DIR = MEAS_DIR + "Escudero/GRAW_radiosondes/"
 ORIG_DIRS = (
     SONDE_DIR + "simulation/eca53_profiles_simulation_2019run/",
     SONDE_DIR + "simulation/eca54_escudero_profiles_simulation2019/",
-    SONDE_DIR + "simulation/eca55_escudero_profiles/",
+    SONDE_DIR + "simulation/eca55_escudero_profiles_a/",
+    SONDE_DIR + "simulation/eca55_escudero_profiles_b/",
     SONDE_DIR + "simulation/eca56_escudero_profiles/",
     SONDE_DIR + "simulation/eca58_escudero_profiles/",
     SONDE_DIR + "simulation/yopp2022_escudero_profiles/",
+    SONDE_DIR + "simulation/eca59_escudero_profiles/",
 )
 SAMPLEFNAME = "20220401120020047677_UPP_RAW_89056_2022040112.txt"
 
