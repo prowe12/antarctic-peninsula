@@ -13,24 +13,12 @@ import numpy as np
 import os
 from time import strptime, strftime
 
-
-# My modules
-# from antarc.graw_sonde_cols import (
-#     graw_raw_to_datadenial,
-#     compare_profiles,
-
-from antarc.graw_sonde_cols import (
-    get_cols_esc_eca53,
-    get_cols_esc_eca54,
-    get_cols_esc_eca55,
-    get_cols_esc_eca56,
-    get_cols_esc_yopp2022,
-)
-
-# get_cols_esc_eca53_old,
-
-# Parameters
+# My parameters and modules
 import antarc.params
+from antarc.escudero.parameters import esc_params
+from antarc.escudero.get_stand_files.graw_get_column_map import (
+    graw_get_column_map,
+)
 
 
 def getdatetuplefrom_datelist(datelist):
@@ -99,9 +87,6 @@ def graw_to_std_fmt(
     lat,
     lon,
     height,
-    cols,
-    units,
-    colmap,
 ):
     """
     Save GRAW output into a csv file with a standard format
@@ -223,30 +208,13 @@ def graw_to_std_fmt(
                 inheader = False
             i += 1
 
-        # Skip two lines, which are the column labels and the units.
-        # First, make sure they are as expected.
-        # Require 2+ spaces between words
-        # if re.split(r"\s{2,}", lines[i]) != cols:
+        # Get column labels and units
         file_cols = [x.strip() for x in lines[i].split("\t")]
-
-        if file_cols != cols:
-            # file_col = re.split(r"\s{2,}", lines[i])
-            logmsg = (
-                genmsg
-                + f": Columns differ; file has:\n{file_cols} \n\nnot\n\n{cols}"
-            )
-            # ", moving on"
-            raise ValueError(logmsg)
-            print(logmsg, file=lid)
-            continue
         i += 1
-        # if any(lines[i].split()[j] != units[j] for j in iunit):
-
         file_units = lines[i].split()
-        if file_units != units:
-            msg = f"On file {input_file}, the units are:\n"
-            msg2 = f"\n{file_units}\n\nbut should be\n\n{units}"
-            raise ValueError(msg + msg2)
+
+        # Make sure columns and units are among those expected
+        colmap = graw_get_column_map(file_cols, file_units)
 
         # Check if wind speed will need to be converted from m/s to knots
         # For this we use index 1 of the column map, which corresponds to
@@ -276,7 +244,7 @@ def graw_to_std_fmt(
         # time_s, press, alt, temp, rhw, dewpt, wdir, wspd
         met = np.nan * np.ones((nlevs, 8))
 
-        # Go through the rest of the record until we get to 'Trop' or a bad line
+        # Go through  rest of the record until we get to 'Trop' or a bad line
         # foundbadalt = False
         j = 0
         for j, line in enumerate(lines[i:]):
@@ -356,140 +324,42 @@ def graw_to_std_fmt(
     )
 
 
-# Parameters
-from antarc.escudero.parameters import esc_params, sonde_params
-from antarc.escudero.parameters import atm_prof_params
-
-
-# Directories with radiosonde data and function to parse them
-get_col_fun = {
-    "/eca54_escudero_profiles_simulation2019/": get_cols_esc_eca54,  # 1
-    "/eca55_escudero_profiles_a/": get_cols_esc_eca55,  # 2
-    "/eca55_escudero_profiles_b/": get_cols_esc_eca54,  # 3
-    "/eca56_escudero_profiles/": get_cols_esc_eca56,  # 4
-    "/eca58_escudero_profiles/": get_cols_esc_yopp2022,  # 5
-    "/yopp2022_escudero_profiles/": get_cols_esc_yopp2022,  # 6
-    "/eca59_escudero_profiles/": get_cols_esc_yopp2022,  # 7
-    "/simulation_reruns_2023/": get_cols_esc_yopp2022,
-}
+# Directories from parameter file
+MEAS_DIR = antarc.params.MEAS_DIR
 
 # Set variables from parameters
-lat = esc_params.LATITUDE
-lon = esc_params.LONGITUDE
-height = esc_params.ALTITUDE
-
-outdir = sonde_params.STAND_DIR
-no_qc_dir = sonde_params.NO_QC_DIR
-sampfile = sonde_params.SAMPLEFNAME
-prefix = "esc_sonde_v0"
-fmt = atm_prof_params.SONDE_FILEFORMAT
+LAT = esc_params.LATITUDE
+LON = esc_params.LONGITUDE
+HEIGHT = esc_params.ALTITUDE
 
 
-sonde_dir = antarc.params.MEAS_DIR + "Escudero/GRAW_radiosondes/"
-outdir = antarc.params.MEAS_DIR + "Escudero/radiosondes/graw/"
+# Directories
+SONDE_DIR = MEAS_DIR + "Escudero/GRAW_radiosondes/"
+ORIG_DIRS = (
+    SONDE_DIR + "simulation/eca54_escudero_profiles_simulation2019/",
+    SONDE_DIR + "simulation/eca55_escudero_profiles_a/",
+    SONDE_DIR + "simulation/eca55_escudero_profiles_b/",
+    SONDE_DIR + "simulation/eca56_escudero_profiles/",
+    SONDE_DIR + "simulation/eca58_escudero_profiles/",
+    SONDE_DIR + "simulation/yopp2022_escudero_profiles/",
+    SONDE_DIR + "simulation/eca59_escudero_profiles/",
+    SONDE_DIR + "simulation/simulation_reruns_2023/",
+)
+OUTDIR = MEAS_DIR + "Escudero/radiosondes/graw/"
 
 
-# Reading files back in:
-# fname = '/Users/prowe/Sync/measurements/Escudero/radiosondes/graw/esc_sonde_dd_v1_2017011212.txt'
+PREFIX = "esc_sonde_v0"
 
 
 # Run the code to convert from the GRAW format to the data denial format
-sampfile = sonde_params.SAMPLEFNAME
-for indir in sonde_params.ORIG_DIRS[1:]:
+# sampfile = sonde_params.SAMPLEFNAME
+SAMPFILE = "20220401120020047677_UPP_RAW_89056_2022040112.txt"
+for indir in ORIG_DIRS:
     slash = indir[: indir.rfind("/")].rfind("/")
-    get_cols = get_col_fun[indir[slash:]]
-    cols, units, icol = get_cols()
-    graw_to_std_fmt(
-        indir, outdir, sampfile, prefix, lat, lon, height, cols, units, icol
-    )
+    graw_to_std_fmt(indir, OUTDIR, SAMPFILE, PREFIX, LAT, LON, HEIGHT)
 
 
-# For first field season, simulations often have high temps and winds of zero
-# Whereas these values seem to use the kestrel surface readings
-# So use these for no
-# ECA53: 2017/01/12 - 2017/01/31
-indir = sonde_dir + "soundings_txt_YYYYMMDD_hhmm/"
-sampfile = "20170112_1205.txt"
-get_cols = get_cols_esc_eca53
-cols, units, icol = get_cols()
-graw_to_std_fmt(
-    indir, outdir, sampfile, prefix, lat, lon, height, cols, units, icol
-)
-
-
-# Plot the original sonde profiles vs version with minor QC
-# savedir = outdir + "figures/"
-# compare_profiles(outdir, no_qc_dir, fmt, "final", "noQC", savedir)
-
-
-# def compare_profiles(
-#     dir1: str, dir2: str, fmt: str, lab1: str, lab2: str, savedir: str
-# ):
-#     """
-#     Create figures that compare radiosonde profiles between radiosonde results
-#     in data denial format in two directories, e.g. where one has some QC and
-#     The other does not
-#     @param sampfile  Name of a sample file to match
-#     @param dir1  The first directory
-#     @param dir2  The second directory
-#     @param fmt  The format of the files to be loaded in
-#     @param lab1  Label for curves corresponding to dir1
-#     @param lab2  Label for curves corresponding to dir2
-#     @param savedir  Directory to save created figures
-#     """
-
-#     # Get filenames
-#     sonde_file_n_dates = get_files(dir1, fmt)
-
-#     for sonde_file, sonde_date in sonde_file_n_dates:
-#         if not exists(dir2 + sonde_file):
-#             continue
-#         print("Working on", sonde_file)
-#         sonde1 = Sonde(dir1, sonde_file, sonde_date)
-#         sonde2 = Sonde(dir2, sonde_file, sonde_date)
-
-#         zmax = min(max(np.nanmax(sonde1.z), np.nanmax(sonde2.z)), 30) + 1
-#         h2omax = (
-#             min(max(np.nanmax(sonde1.h2o), np.nanmax(sonde2.h2o)), 10000) + 100
-#         )
-#         rhmax = min(max(np.nanmax(sonde1.rh), np.nanmax(sonde2.rh)), 120) + 2
-#         tmax = min(max(np.nanmax(sonde1.T), np.nanmax(sonde2.T)), 300) + 5
-#         tmin = max(min(np.nanmin(sonde1.T), np.nanmin(sonde2.T)), 190) - 10
-
-#         plt.figure(1)
-#         plt.clf()
-#         plt.subplot(221)
-#         plt.plot(sonde2.P, sonde2.z, ".-", label=lab2)
-#         plt.plot(sonde1.P, sonde1.z, label=lab1)
-#         plt.title(sonde_file)
-#         plt.xlabel("Pressure")
-#         plt.ylabel("Altitude (km)")
-#         plt.legend()
-#         plt.ylim([-0.4, zmax])
-
-#         plt.subplot(222)
-#         plt.plot(sonde2.T, sonde2.z, ".-")
-#         plt.plot(sonde1.T, sonde1.z)
-#         plt.xlabel("Temperature")
-#         plt.ylabel("Altitude (km)")
-#         plt.ylim([-0.4, zmax])
-#         plt.xlim([tmin, tmax])
-
-#         plt.subplot(223)
-#         plt.plot(sonde2.h2o, sonde2.z, ".-")
-#         plt.plot(sonde1.h2o, sonde1.z)
-#         plt.plot([-100, h2omax], [0, 0], "k:")
-#         plt.plot([0, 0], [-0.4, zmax], "k:")
-#         plt.xlabel("H2O")
-#         plt.xlim([-100, h2omax])
-#         plt.ylim([-0.4, zmax])
-
-#         plt.subplot(224)
-#         plt.plot(sonde2.rh, sonde2.z, ".-")
-#         plt.plot(sonde1.rh, sonde1.z)
-#         plt.xlabel("RH (%)")
-#         plt.xlim([-2, rhmax])
-#         plt.ylim([-0.4, zmax])
-
-#         figname = sonde_file[:-3] + "png"
-#         plt.savefig(savedir + figname)
+# For first field season (2017/01), use these too
+INDIR = SONDE_DIR + "soundings_txt_YYYYMMDD_hhmm/"
+SAMPFILE = "20170112_1205.txt"
+graw_to_std_fmt(INDIR, OUTDIR, SAMPFILE, PREFIX, LAT, LON, HEIGHT)
