@@ -81,8 +81,16 @@ from os.path import exists
 
 
 # My modules
-from antarc.get_atm_profs_rsrc import get_files, FileInfo, Sonde, Era, Prof
-from antarc.get_atm_profs_rsrc import get_co2, CO2stationData, CarbonTracker
+from antarc.escudero.case202205.get_atm_profs_rsrc import (
+    get_files,
+    FileInfo,
+    Sonde,
+    Era,
+    Prof,
+    get_co2,
+    CO2stationData,
+    CarbonTracker,
+)
 
 
 def get_atm_profs(atm_prof_params, esc_params, esc_case, redo: bool = True):

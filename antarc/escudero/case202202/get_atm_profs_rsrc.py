@@ -144,7 +144,7 @@ class Sonde:
         if any(np.diff(self.z) <= 0):
             ibad = np.where(np.diff(self.z) <= 0)[0]
             if len(ibad) == 1:
-                print("Warning: one altitudes decrease swith time, fixing")
+                print("Warning: one altitude decreases with time, fixing")
                 self.z[ibad[0] + 1] = np.mean(
                     [self.z[ibad[0]], self.z[ibad[0] + 2]]
                 )
@@ -618,16 +618,21 @@ class Prof:
                 + " K but should be < 12 K."
             )
 
-    def set_surf_T(self, surfmetFiles, sonde_date):
+    def set_surf_temp(self, surfmetFiles, sonde_date, surfmet_type: str):
         """
         Set the surface temperature using surface meteorological data
         @param surfmetFiles  surface met files
         @param sonde_data
+        @param surfmet_type  Type of surface data being used; e.g. tarp or frei
         """
+        get_surface_temp_types = {
+            "tarp": get_surface_temp_tarp,
+            "frei": get_surface_temp_frei,
+        }
+        get_surface_temp = get_surface_temp_types[surfmet_type]
+        zmet, tmet = get_surface_temp(surfmetFiles, sonde_date)
+
         zsurf = self.z[0]
-
-        zmet, tmet = get_surface_T(surfmetFiles, sonde_date)
-
         if zmet < zsurf:
             raise NameError(
                 "Met height is below sounding surface height. "
@@ -878,9 +883,9 @@ class Era:
                 "r": "%",
                 "z": "m**2 s**-2",
                 "o3": "kg kg**-1",
-                "u": "m s**-1",
-                "v": "m s**-1",
             }
+            # "u": "m s**-1",
+            # "v": "m s**-1",
 
             for exptd in expectedvars:
                 if exptd not in nci.variables.keys():
@@ -893,27 +898,27 @@ class Era:
                     msg2 = exptd + ", but got " + nci[exptd].units
                     raise ValueError(msg1 + msg2)
 
-            umat = nci["u"][:]
-            vmat = nci["v"][:]
             tmat = nci["t"][:]
             o3mat = nci["o3"][:]
             rhmat = nci["r"][:]
             zmat = nci["z"][:] / 9.80665 / 1000
+            # umat = nci["u"][:]
+            # vmat = nci["v"][:]
 
             temp = map_interp(tmat, date, lat, lon, dates, lats, lons)
             ozone = map_interp(o3mat, date, lat, lon, dates, lats, lons)
             rhw = map_interp(rhmat, date, lat, lon, dates, lats, lons)
             height = map_interp(zmat, date, lat, lon, dates, lats, lons)
-            uwind = map_interp(umat, date, lat, lon, dates, lats, lons)
-            vwind = map_interp(vmat, date, lat, lon, dates, lats, lons)
+            # uwind = map_interp(umat, date, lat, lon, dates, lats, lons)
+            # vwind = map_interp(vmat, date, lat, lon, dates, lats, lons)
 
             self.P = nci["level"][:]
             self.T = temp
             self.o3 = ozone * 1000  # kg/kg * 1000 g/kg => g/kg
             self.rh = rhw
             self.z = height
-            self.uwind = uwind
-            self.vwind = vwind
+            # self.uwind = uwind
+            # self.vwind = vwind
 
         # Interpolate to location of Escudero
         # import pandas as pd
@@ -1064,14 +1069,46 @@ def map_interp(amat, date, lat, lon, dates, lats, lons):
     return ndimage.map_coordinates(amat, dims)[0]
 
 
-def get_surface_T(surfmetFiles, sonde_date):
+def get_surface_temp_frei(surfmetFiles, sonde_date):
+    """
+    Get surface temperatures from file corresponding to date of
+    current sounding, from the surface met data at Frei
+    @param surfmetFiles  Frei met files directory and file names
+    @param sonde_date  Desired date
+    """
+    # Get the filename that includes the sonde date
+    ism = bisect_right(surfmetFiles.dates, sonde_date) - 1
+    metfname = surfmetFiles.dir + surfmetFiles.files[ism]
+
+    # Load in the filename
+    dfm = pd.read_csv(metfname)
+
+    # Convert the column with the date to datetime
+    dtime = pd.to_datetime(dfm["Date"])
+
+    # Get the index to the time within the met file
+    # falling just before the time of interest
+    itime = bisect_right(dtime, sonde_date) - 1
+
+    # The Frei met temperatures are every 15 minutes, and they are at a
+    # different altitude, so just use this index
+    tmet = dfm["temperature (C)"] + 273.15
+    zmet = nci["alt"][:] / 1000
+
+    return zmet, tmet
+
+
+def get_surface_temp_tarp(surfmetFiles, sonde_date):
     """
     Get surface temperatures from file corresponding to date of
     current sounding.
     """
 
+    # TODO: fix
     ism = bisect_right(surfmetFiles.dates, sonde_date) - 1
     metfname = surfmetFiles.dir + surfmetFiles.files[ism]
+
+    raise ValueError("Need to fix this!")
     with Dataset(metfname, "r", format="NETCDF4") as nci:
         itime = date2index(sonde_date, nci.variables["time"], select="after")
 
