@@ -4,6 +4,9 @@
 # and needs to be modified
 params.py
 
+# folder with obsolete code
+obsolete
+
 # Python code #
 ###############
 __pycache__
