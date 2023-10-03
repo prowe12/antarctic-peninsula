@@ -13,8 +13,15 @@ Based on code from:
 import requests
 from datetime import datetime, timedelta
 import pandas as pd
-from bs4 import BeautifulSoup
-import re
+import json
+
+# from bs4 import BeautifulSoup
+# import re
+
+
+# import mechanize
+# import urllib2
+# from http.cookiejar import CookieJar
 
 
 def gen_days(year: int) -> list:
@@ -103,79 +110,127 @@ def get_met_data_by_minute(
     @param filename  The filename to save to
     @return The met data as a pandas dataframe
     """
-    # Get the URL and read in the content
-    resp = requests.get(url)
 
-    # Get header from HTML file
-    data = []
-    list_header = []
+    # station = str(950001)
+    # datestr =
 
-    soup = BeautifulSoup(resp.content, "html.parser")
-    try:
-        header1 = soup.find_all("tr", {"class": re.compile("bg*")})[0]
-        header2 = soup.find_all("tr", {"class": re.compile("bg*")})[1]
-    except:
-        print(f"Bad or missing data for {url}")
-        return None
+    # url = "https://climatologia.meteochile.gob.cl/application/servicios/getDatosRecientesEma/"
+    # /2020/01?usuario=prowe@harbornet.com&token=92508d823a380131dc33a3b3
+    # # url = "https://climatologia.meteochile.gob.cl/application/geoservicios/getEmaResumenDiarioGeo?usuario="
+    # username = "prowe@harbornet.com"
+    # apikey = "92508d823a380131dc33a3b3"
+    # response = json.loads(
+    #     requests.get(url + "usuario=" + username + "&token=" + apikey).text
+    # )
+    # print(response)
 
-    list_header = []
-    rows = []
-    for items in header1:
-        if items.get_text() == "\n":
-            continue
-        # Handle multiple rows
-        rowspan = (
-            int(items.attrs["rowspan"]) if "rowspan" in items.attrs else 1
-        )
-        # Handle multiple columns
-        colspan = (
-            int(items.attrs["colspan"]) if "colspan" in items.attrs else 1
-        )
+    # # Get the URL and read in the content
+    # resp = requests.get(url)
 
-        for icol in range(colspan):
-            list_header.append(items.get_text())
-            rows.append(rowspan)
+    # # Get header from HTML file
+    # data = []
+    # list_header = []
 
-    icol = 0
-    for items in header2:
-        if items.get_text() == "\n":
-            continue
-        if rows[icol] > 2:
-            raise ValueError("Bad value for rowspan")
-        if rows[icol] == 2:
-            # This column spans two rows, so move on to the next column before
-            # appending text
-            icol += 1
-        list_header[icol] += " " + items.get_text()
-        icol += 1
+    # cj = CookieJar()
+    # br = mechanize.Browser()
+    # br.set_cookiejar(cj)
+    # br.open(url) #"https://id.arduino.cc/auth/login/")
 
-    # Check if the header is as expected
-    for colname in old_header_to_new:
-        if colname not in list_header:
-            print(f"Bad or missing data for {url}")
-            return None
+    # br.select_form(nr=0)
+    # br.form["username"] = "prowe@harbornet.com"
+    # br.form["password"] = "password."
+    # br.submit()
+    # print(br.response().read()())
 
-    html_table = soup.find_all("tr", {"class": re.compile("bg*")})[2:]
+    # session = requests.Session()  # Create new session
+    # session.get(
+    #     "https://climatologia.meteochile.gob.cl/application/usuario/loginUsuario"
+    # )
+    # #    "https://www.seoprofiler.com/account/login"
+    # # )  # set seoprofilersession and csrftoken cookies
 
-    for element in html_table:
-        sub_data = []
-        for sub_element in element:
-            if sub_element.get_text() == "\n":
-                continue
-            sub_data.append(sub_element.get_text())
-        data.append(sub_data)
+    # session.post(
+    #     "https://climatologia.meteochile.gob.cl/application/usuario/validaFormularioLogin",
+    #     data={
+    #         "correo": "prowe@harbornet.com",
+    #         "clave": "z@2q*Nt&r7GrQQK",
+    #     },
+    # )  # login, sets needed cookies
+    # # "csrfmiddlewaretoken": session.cookies.get_dict()["csrftoken"],
 
-    # Put the data into Pandas DataFrame
-    met = pd.DataFrame(data=data, columns=list_header)
+    # # Now use this session to get all data you need!
+    # resp = session.get(url)
+    # #     "https://www.seoprofiler.com/project/google.com-fa1b9c855721f3d5"
+    # # )  # get main page content
 
-    # Rename columns from Spanish to English
-    met.rename(columns=old_header_to_new, inplace=True)
+    # print(resp.status_code)  # should be 200
 
-    # Converting Pandas DataFrame
-    # into CSV file
-    met.to_csv(filename)
+    # soup = BeautifulSoup(resp.content, "html.parser")
+    # try:
+    #     header1 = soup.find_all("tr", {"class": re.compile("bg*")})[0]
+    #     header2 = soup.find_all("tr", {"class": re.compile("bg*")})[1]
+    # except:
+    #     print(f"Bad or missing data for {url}")
+    #     return None
 
-    return met
+    # list_header = []
+    # rows = []
+    # for items in header1:
+    #     if items.get_text() == "\n":
+    #         continue
+    #     # Handle multiple rows
+    #     rowspan = (
+    #         int(items.attrs["rowspan"]) if "rowspan" in items.attrs else 1
+    #     )
+    #     # Handle multiple columns
+    #     colspan = (
+    #         int(items.attrs["colspan"]) if "colspan" in items.attrs else 1
+    #     )
+
+    #     for icol in range(colspan):
+    #         list_header.append(items.get_text())
+    #         rows.append(rowspan)
+
+    # icol = 0
+    # for items in header2:
+    #     if items.get_text() == "\n":
+    #         continue
+    #     if rows[icol] > 2:
+    #         raise ValueError("Bad value for rowspan")
+    #     if rows[icol] == 2:
+    #         # This column spans two rows, so move on to the next column before
+    #         # appending text
+    #         icol += 1
+    #     list_header[icol] += " " + items.get_text()
+    #     icol += 1
+
+    # # Check if the header is as expected
+    # for colname in old_header_to_new:
+    #     if colname not in list_header:
+    #         print(f"Bad or missing data for {url}")
+    #         return None
+
+    # html_table = soup.find_all("tr", {"class": re.compile("bg*")})[2:]
+
+    # for element in html_table:
+    #     sub_data = []
+    #     for sub_element in element:
+    #         if sub_element.get_text() == "\n":
+    #             continue
+    #         sub_data.append(sub_element.get_text())
+    #     data.append(sub_data)
+
+    # # Put the data into Pandas DataFrame
+    # met = pd.DataFrame(data=data, columns=list_header)
+
+    # # Rename columns from Spanish to English
+    # met.rename(columns=old_header_to_new, inplace=True)
+
+    # # Converting Pandas DataFrame
+    # # into CSV file
+    # met.to_csv(filename)
+
+    # return met
 
 
 def get_met_data_for_year(
