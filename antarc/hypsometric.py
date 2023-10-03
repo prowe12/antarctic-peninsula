@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Sep 12 13:44:01 2023
+
+@author: prowe
+"""
+
 """
 Created on 2019/01/10
 
@@ -12,138 +20,113 @@ Created on 2019/01/10
 
 import numpy as np
 
-def hypsometric(Z, T, RH, Po):
+from antarc.humidRS80 import humidRS80
 
-    # Inputs
-    # Z: height in m
-    # T: temperature in Kelvin
-    # RH: relative humidity (%)
-    # Po: surface pressure in mb
-    # inisZ_P (character string, either 'z' or 'P'), to tell whether
-    #   in is height or pressure
-    #
-    #
+
+def hypsometric(alt, temp, rhw, press0):
+    """
+    Hypsometric equation
+    @param alt altitudes
+    @param temp temperatures
+    @param rhw relative humidities wrt water
+    @param press0 surface pressure
+
     # code written by Steve H for hypsometric determination
     # of altitude (in meters).
     #
     # Modified by PMR for Python, etc
     #
     # Warning: this is not very accurate, just approximate.
-    
-    
+
     # The hydrostatic equation:
     #
     # P1/P2 = exp[ g/RT * (z2-z1) ]
     # P2    = P1 * exp[ g/RT * (z2-z1) ]
-    
-    
-    # constants
-    Rd = 287.058
-    g = 9.80665
-    eps = 0.622
-        
-    # input is z, output needs to be P
-    P = np.zeros(len(Z)) + Po 
-    
-    e = RH/100 * esw(T)          # I assume wrt water, but should be?
-    
-    for i in range(len(T)-1):
-        w = eps * (e/(P-e))
-        Tv = T * ((1+(w/eps))/(1+w))
-        TvBar = (Tv[i] + Tv[i+1]) / 2
-        dz = Z[i+1] - Z[i]
-        P[i+1:] = P[i] * np.exp(-dz / (Rd*TvBar/g))  #disp(P(i+1));
-        
-        '''
-        dP = 1e6
-        while np.abs(dP) > .1:
-            Pprev = P[i]
-            w = eps * (e/(P-e))
-            Tv = T * ((1+(w/eps))/(1+w))
-            TvBar = (Tv[i] + Tv[i+1]) / 2
-            dz = Z[i+1] - Z[i]
-            P[i+1:] = P[i] * np.exp(-dz / (Rd*TvBar/g))  #disp(P(i+1));
-            dP = P[i+1] - Pprev
-        '''
-            
-            
-    return P
-    
+    """
 
-def hypsometric_for_z(P, T, RH, zo):
-
-    # Inputs
-    # Z: height in m
-    # T: temperature in Kelvin
-    # RH: relative humidity (#)
-    # Po: surface pressure in mb
-    # inisZ_P (character string, either 'z' or 'P'), to tell whether
-    #   in is height or pressure
-    #
-    #
-    # code written by Steve H for hypsometric determination
-    # of altitude (in meters).
-    #
-    # Modified by PMR for Python, etc
-    #
-    # Warning: this is not very accurate, just approximate.
-    
-    
-    # The hydrostatic equation:
-    #
-    # P1/P2 = exp[ g/RT * (z2-z1) ]
-    # P2    = P1 * exp[ g/RT * (z2-z1) ]
-    
-    
     # constants
-    Rd = 287.058
-    g = 9.80665
+    gas_const = 287.058
+    g_const = 9.80665
     eps = 0.622
-        
-    # input is P, output needs to be z
-    z = np.zeros(len(P)) + zo
-    
-    e = RH/100 * esw(T)          # I assume wrt water, but should be?
-    
-    for i in range(len(T)-1):
-        w = eps * (e/(P-e))
-        Tv = T * ((1+(w/eps))/(1+w))
-        TvBar = (Tv[i] + Tv[i+1]) / 2
-        
-        # dz = Z[i+1] - Z[i]
-        # P[i+1:] = P[i] * np.exp(-dz / (Rd*TvBar/g))  #disp(P(i+1));
-        # dP = np.exp(-dz / (Rd*TvBar/g))
-        # ln(dP) = -dz / (Rd*TvBar/g)
-        # dz = -ln(dP)*Rd*TvBar/g
-        dz = -np.log(P[i+1] / P[i]) * Rd * TvBar / g
-        z[i+1] = z[i] + dz
-        
-        '''
-        dP = 1e6
-        while np.abs(dP) > .1:
-            Pprev = P[i]
-            w = eps * (e/(P-e))
-            Tv = T * ((1+(w/eps))/(1+w))
-            TvBar = (Tv[i] + Tv[i+1]) / 2
-            dz = Z[i+1] - Z[i]
-            P[i+1:] = P[i] * np.exp(-dz / (Rd*TvBar/g))  #disp(P(i+1));
-            dP = P[i+1] - Pprev
-        '''
-            
-            
-    return z
-    
-    
-    
-def esw(T):
-    '''
+
+    # input is alt, output needs to be press
+    press = np.zeros(len(alt)) + press0
+
+    # Get the partial pressure of water vapor (e)
+    press_h2o = rhw / 100 * esw(temp)  # I assume wrt water, but should be?
+
+    for i in range(len(temp) - 1):
+        wrat = eps * (press_h2o / (press - press_h2o))
+        temp_v = temp * ((1 + (wrat / eps)) / (1 + wrat))
+        temp_vbar = (temp_v[i] + temp_v[i + 1]) / 2
+        dalt = alt[i + 1] - alt[i]
+        press[i + 1 :] = press[i] * np.exp(
+            -dalt / (gas_const * temp_vbar / g_const)
+        )  # disp(press(i+1));
+
+        # dP = 1e6
+        # while np.abs(dP) > .1:
+        #     Pprev = press[i]
+        #     w = eps * (press_h2o/(press-press_h2o))
+        #     temp_v = temp * ((1+(w/eps))/(1+w))
+        #     temp_vbar = (temp_v[i] + temp_v[i+1]) / 2
+        #     dz = alt[i+1] - alt[i]
+        #     press[i+1:] = press[i] * np.exp(-dz / (gas_const*temp_vbar/g_const))
+        #     dP = press[i+1] - Pprev
+
+    return press
+
+
+def hypsometric_for_z(press, temp, rhw, alt0):
+    """
+    Use the hypsometric equation to compute altitude
+    @param press: Pressure in mb
+    @param temp: temperature in Kelvin
+    @param rhw: relative humidity (%)
+    @param alt0: starting height in m
+
+    Note: the first element of press, temp, rhw must correspond to alt0
+
+    The hydrostatic equation:
+    P1/P2 = exp[ g/RT * (z2-z1) ]
+    P2    = P1 * exp[ g/RT * (z2-z1) ]
+    """
+
+    # constants
+    gas_const = 287.058
+    g_const = 9.80665
+    eps = 0.622
+
+    # input is press, output needs to be alt
+    alt = np.zeros(len(press))
+    alt[0] = alt0
+
+    # Get the partial pressure of water vapor (e or press_h2o)
+    press_h2o = humidRS80(rhw, temp, "rhw", "Pa", press) / 100
+
+    for i in range(len(temp) - 1):
+        temp_v = temp / (1 - press_h2o / press * (1 - eps))
+        temp_vbar = (temp_v[i] + temp_v[i + 1]) / 2
+
+        # dz = alt[i+1] - alt[i]
+        # press[i+1:] = press[i] * np.exp(-dz / (gas_const*temp_vbar/g_const))  #disp(press(i+1));
+        # dP = np.exp(-dz / (gas_const*temp_vbar/g_const))
+        # ln(dP) = -dz / (gas_const*temp_vbar/g_const)
+        # dz = -ln(dP)*gas_const*temp_vbar/g_const
+        dalt = (
+            -gas_const * temp_vbar / g_const * np.log(press[i + 1] / press[i])
+        )
+        alt[i + 1] = alt[i] + dalt
+
+    return alt
+
+
+def esw(temp):
+    """
     input temperature in kelvin.  output of esw in millibars
-    '''
-    
-    #using intergrated clausius-clapyeron equation for h2o mixing ratio
-    a = 17.27
-    b = 35.86
-    es = (3.8 / 0.62197) * np.exp(a * ((T-273)/(T-b)))
-    
-    return es
+    """
 
+    # using intergrated clausius-clapyeron equation for h2o mixing ratio
+    cona = 17.27
+    conb = 35.86
+    return (3.8 / 0.62197) * np.exp(cona * ((temp - 273) / (temp - conb)))
