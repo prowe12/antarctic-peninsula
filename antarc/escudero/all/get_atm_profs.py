@@ -136,6 +136,7 @@ def get_atm_profs(
     # co2_file_drake = atm_prof_params.CO2_FILE_PALMER
     # co2_file_palmer = atm_prof_params.CO2_FILE_DRAKE
     freimet_alt = atm_prof_params.FREI_MET_ALT
+    tarp_met_alt = 0.025  # km, approximate
 
     # Flags. The created profiles are always saved. These flags set whether to
     # also plot and save figures and pickled results.
@@ -221,22 +222,6 @@ def get_atm_profs(
         layerbnds = np.array(layerbnds_in)
         layerbnds[layerbnds < 1] += sonde.z[0]  # km
 
-        # Make sure the surface temperature agrees fairly well with the
-        # TARP AWS or FREI met data and, if not, replace it with that value
-        # Determine if we can use the TARP AWS surface met data (near sounding)
-        # or if we must use the more distant FREI data
-        if tarpFiles.dates[0] <= sonde_date <= tarpFiles.dates[-1]:
-            # Use TARP data
-            surfmetFiles = tarpFiles
-            surfmet_type = "tarp"
-            # TODO
-            # surf_height = tarpmet_alt
-        else:
-            # Use frei data
-            surfmetFiles = freiFiles
-            surfmet_type = "frei"
-            surf_height = freimet_alt
-
         # If the CT data ends a while before the desired date, try year before
         date_for_ct = sonde_date
         lastdate = ctFiles.dates[-1]
@@ -252,13 +237,37 @@ def get_atm_profs(
                 date_for_ct.day,
                 date_for_ct.hour,
             )
+        # Make sure the surface temperature agrees fairly well with the
+        # TARP AWS or FREI met data and, if not, replace it with that value
+        # Determine if we can use the TARP AWS surface met data (near sounding)
+        # or if we must use the more distant FREI data
+        use_frei = False
+        if tarpFiles.dates[0] <= sonde_date <= tarpFiles.dates[-1]:
+            # Use TARP data
+            surfmetFiles = tarpFiles
+            surfmet_type = "tarp"
+            surf_height = tarp_met_alt
+
+            surf = get_surf_met(surfmetFiles, sonde.date, surfmet_type)
+
+        else:
+            use_frei = True
+
+        if use_frei or np.isnan(surf["temp"]):
+            # Use frei data
+            surfmetFiles = freiFiles
+            surfmet_type = "frei"
+            surf_height = freimet_alt
+
+            # Get surface met data
+            surf = get_surf_met(surfmetFiles, sonde.date, surfmet_type)
+
+        surf["alt"] = surf_height
+
         # Get the nearest date
         # ddate = [x - date_for_ct for x in ctFiles.dates]
         # idate = np.argmin(np.abs(ddate))
 
-        # Get surface met data
-        surf = get_surf_met(surfmetFiles, sonde.date, surfmet_type)
-        surf["alt"] = surf_height
         sonde.quality_control(surf)
 
         ctracker = CarbonTracker(ctFiles, date_for_ct, lat, lon)
@@ -282,13 +291,14 @@ def get_atm_profs(
         #    profo = copy.deepcopy(prof)  # For plotting figures
 
         # Set surface temperatures
-        prof.set_surf_temp(surf_height, surf["temp"])
+        # prof.set_surf_temp(surf_height, surf["temp"])
         prof.model_extra = model_extra  # model for other molecs
 
         prof.error_check(era)  # Check for Nans, z, P
 
         # Save the output as netcdf file
         fname = out_dir + "prof" + prof.date.strftime("%Y%m%d_%H%m")
+
         prof.write_to_netcdf_file(fname + ".nc")
 
         # If specified, plot the results
