@@ -26,6 +26,9 @@ from antarc.hypsometric import hypsometric
 from antarc.getfilenames import get_filenames_dates
 from antarc.hypsometric import hypsometric_for_z
 
+# TODO: import map_interp rather than using function
+#       defined here?  Are they the same:
+
 
 # # # # # # #     Get file names     # # # # # # #
 class FileInfo:
