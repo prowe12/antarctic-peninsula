@@ -15,7 +15,74 @@ from antarc.get_era5_from_web import get_paramsets, get_era5
 from antarc import params
 
 
+def get_era5_profiles_from_web(
+    lat: float, lon: float, date1, date2, redo: bool, outdir: str
+):
+    """
+    Get ERA5 profile data from web. This version is preferred to that below.
+    """
+
+    north = np.round(lat / 0.25) * 0.25 + 0.25
+    east = np.round(lon / 0.25) * 0.25 + 0.25
+    latlon = {
+        "north": north,
+        "south": north - 0.25,
+        "east": east,
+        "west": east - 0.5,
+    }
+
+    # Pressure levels
+    press_levs = np.hstack(
+        [
+            np.arange(1000, 925 - 5, -25),
+            np.arange(900, 200, -50),
+            np.arange(200, 100 - 5, -25),
+        ]
+    )
+    press_levs_ints = list(press_levs) + [70, 50, 30, 20, 10, 7, 5, 3, 2]
+    press_levs = [str(p) for p in press_levs_ints]
+
+    # Times
+    times = [f"0{i}:00" for i in range(10)] + [
+        f"{i}:00" for i in range(10, 24)
+    ]
+    dataset = "reanalysis-era5-pressure-levels"
+    # download_flag = True
+
+    # Get date; pad out four days on each side
+    yearstr = str(date1.year)
+    monthstr = str(date1.month).zfill(2)
+    days = list(range(date1.day, date2.day + 1))
+    prefix = "era5_esc_" + date1.strftime("%Y%m")
+
+    paramsets = get_paramsets(
+        prefix,
+        yearstr,
+        monthstr,
+        days,
+        times,
+        latlon,
+        press_levs,
+    )
+
+    # If redo is false, purge the days that were already downloaded
+    if not redo:
+        for i in range(len(paramsets) - 1, -1, -1):
+            if exists(outdir + paramsets[i]["outfile"]):
+                paramsets.pop(i)
+
+    get_era5(outdir, paramsets, dataset)
+
+
 def get_era5_from_web(esc_params, esc_case, redo):
+    """
+    Get ERA5 profile data from web.
+    This version is not preferred but is kept for legacy reasons.
+    Use get_era5_profiles_from_web instead.
+    @param esc_params  Parameters for escudero
+    @param esc_case  Parameters for this specific case
+    @param redo  Flag stating whether to redo runs that have already been done
+    """
     LATITUDE = esc_params.LATITUDE
     LONGITUDE = esc_params.LONGITUDE
     # ALTITUDE = esc_params.ALTITUDE
