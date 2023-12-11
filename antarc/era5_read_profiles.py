@@ -6,10 +6,14 @@ Created on Fri Jul  8 12:44:48 2022
 @author: prowe
 """
 
+# Modules
 from netCDF4 import Dataset, num2date
 import numpy as np
 import datetime as dt
 import glob
+
+# My modules
+from antarc.map_interp import map_interp
 
 
 def read_era5_broadband_down(
@@ -40,6 +44,15 @@ def read_era5_broadband_down(
 
 
 def get_dates_from_filenames(files, dfmt, date1, date2):
+    """
+    Assuming the files have the format dfmt, return the dates
+    that are part of each file name within date1 and date2
+    @param files  Filenames
+    @param dfmt  Format of each filename
+    @param date1  Starting datetime for returning dates
+    @param date2  Ending datetime for returning dates
+    @returns  A list of datetimes
+    """
     # dates = get_dates_from_filenames(files, '%Y%m%d', date1, date2)
     iyear = files[0].find(str(date1.year))
     idot = files[0].find(".nc")
@@ -108,3 +121,119 @@ def read_era5_broadband_down_by_file(
     era5["swd"] = era5["swd"] / 3600
     era5["lwd"] = era5["lwd"] / 3600
     return era5
+
+
+def read_era5_profiles(fname: str) -> dict[float]:
+    """
+    Read ERA5 profiles from downloaded file
+    @param fname  Name of netcdf file
+    @returns  A dictionary containing the ERA5 data
+    """
+    era5 = {}
+    with Dataset(fname, "r") as nci:
+        era5["date"] = num2date(
+            nci["time"][:].data,
+            nci["time"].units,
+            only_use_python_datetimes=True,
+            only_use_cftime_datetimes=False,
+        )
+        era5["lat"] = nci["latitude"][:]
+        era5["lon"] = nci["longitude"][:]
+        era5["level"] = nci["level"][:]
+        era5["time"] = nci["time"][:]
+        era5["alt"] = nci["z"][:]
+        era5["temp"] = nci["t"][:]
+        era5["rhw"] = nci["r"][:]
+        era5["ozone"] = nci["o3"][:]
+        era5["uwind"] = nci["u"][:]
+        era5["vwind"] = nci["v"][:]
+
+    return era5
+
+
+def read_era5_profiles_interp(fname: str, lat: float, lon: float, date):
+    """
+    Interpolate the ERA data to the given lat, lon, and datetime
+    @param era  A dictionary of the era data
+    @param lat  The latitude
+    @param lon  The longitude
+    @returns  A new dictionary containing the interpolated data
+    """
+    lats, lons, dates, press, zmat, tmat, rhmat, o3mat, umat, vmat = load_era(
+        fname
+    )
+
+    era = {"press": press}
+
+    ozone = map_interp(o3mat, date, lat, lon, dates, lats, lons)
+    era["temp"] = map_interp(tmat, date, lat, lon, dates, lats, lons)
+    era["rhw"] = map_interp(rhmat, date, lat, lon, dates, lats, lons)
+    era["alt"] = map_interp(zmat, date, lat, lon, dates, lats, lons)
+    era["ozone"] = ozone * 1000  # kg/kg * 1000 g/kg => g/kg
+
+    # For now, allow for missing winds
+    if "uwind" in era.keys() and "vwind" in era.keys():
+        era["uwind"] = map_interp(umat, date, lat, lon, dates, lats, lons)
+        era["vwind"] = map_interp(vmat, date, lat, lon, dates, lats, lons)
+    else:
+        era["uswind"] = np.nan + np.zeros(len(era["temp"]))
+        era["vwind"] = np.nan + np.zeros(len(era["temp"]))
+
+    return era
+
+
+def load_era(fname: str):
+    """
+    Load ERA5 data
+    @param  fname  ERA5 file name
+    """
+    with Dataset(fname, "r", format="NETCDF4") as nci:
+        # Variables, for convenience
+        # 'longitude', 'latitude', 'level', 'time', 't', 'r'
+        # Dimensions for t, r, o3, z:
+        # (time, level, latitude, longitude)
+        lats = nci["latitude"][:]
+        lons = nci["longitude"][:]
+        dates = num2date(
+            nci["time"][:], nci["time"].units, nci["time"].calendar
+        )
+
+        # Check units
+        # Expected variables and units
+        expectedvars = {
+            "level": "millibars",
+            "t": "K",
+            "r": "%",
+            "z": "m**2 s**-2",
+            "o3": "kg kg**-1",
+            "u": "m s**-1",
+            "v": "m s**-1",
+        }
+
+        # For now, allow for case where u/v are missing
+        # (but print file names so we can replace them)
+        for exptd in expectedvars:
+            if exptd not in nci.variables.keys() and exptd in ["u", "v"]:
+                print(f"{fname}: {exptd} missing")
+            elif exptd not in nci.variables.keys() and exptd in ["u", "v"]:
+                raise ValueError(f"{fname}: variable {exptd} missing")
+            elif nci[exptd].units != expectedvars[exptd]:
+                msg1 = "Expected units of " + expectedvars[exptd] + " for "
+                msg2 = exptd + ", but got " + nci[exptd].units
+                raise ValueError(msg1 + msg2)
+
+        press = nci["level"][:]
+        zmat = nci["z"][:] / 9.80665 / 1000
+        tmat = nci["t"][:]
+        rhmat = nci["r"][:]
+        o3mat = nci["o3"][:]
+
+        # Catch for missing u/v
+        if "u" in nci.variables.keys():
+            umat = nci["u"][:]
+            vmat = nci["v"][:]
+        else:
+            umat = None
+            vmat = None
+
+        return lats, lons, dates, press, zmat, tmat, rhmat, o3mat, umat, vmat
