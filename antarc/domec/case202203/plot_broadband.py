@@ -16,7 +16,7 @@ import numpy as np
 
 # from read_raw import RadRaw
 from broadband_reader import Rad
-from broadband_plotter import plotnet  # , plotnet2,
+from broadband_plotter import plotnet  # , plotnet2
 from seb_reader import Pwrf, Era5, Snowpack
 
 # from era5_reader import Era5
@@ -115,10 +115,12 @@ def plotnet_snowpack(axs):
     """
     ax = axs[0]
     ax.plot(spack.dtime, spacktot, "m", label="SNOWPACK")
+    ax.text(spack.dtime[273], 97, "a)", fontsize=16)
     ax.legend()
 
     ax = axs[1]
     ax.plot(dupday(spackday), dup(spacktotave), "m", label="SNOWPACK")
+    ax.text(12.4, 97, "b)", fontsize=16)
     ax.legend()
 
 
@@ -240,6 +242,16 @@ def add_snowpack(axs):
     axs[4].plot(spack.dtime, spack.swnet, "m--", label="SNOWPACK")
     axs[5].plot(spack.dtime, spack.lwnet, "m--", label="SNOWPACK")
 
+    # Add labels
+    ind = 275
+    fsz = 16
+    axs[0].text(spack.dtime[ind], 440, "a)", fontsize=fsz)
+    axs[1].text(spack.dtime[ind], 440, "b)", fontsize=fsz)
+    axs[2].text(spack.dtime[ind], 440, "c)", fontsize=fsz)
+    axs[3].text(spack.dtime[ind], 440, "d)", fontsize=fsz)
+    axs[4].text(spack.dtime[ind], -50, "e)", fontsize=fsz)
+    axs[5].text(spack.dtime[ind], 98, "f)", fontsize=fsz)
+
     axs[0].legend()
     axs[1].legend()
 
@@ -254,10 +266,11 @@ spack_file = main_dir + "snowpack/DOMEC_DFLT_202203.txt"
 # Which figures to plot
 plotqc = False
 ploteach = False
-plotall = False
 plotallzoom = False
-ploteach_with_era5_pwrf_snowpack = True
-plotnet_with_era5_pwrf_snowpack = True
+ploteach_with_era5_pwrf_snowpack = True  # Fig. S5
+plotnet_with_era5_pwrf_snowpack = False  # Fig. S6
+plot_misc = False
+# plotall = True
 
 # Get the observations, including net radiations, and daily average
 obs = Rad(file)
@@ -289,6 +302,10 @@ if ploteach:
     crs = ["orange", "blue", "black", "cyan", "blue", "orange"]
     plot_each()
 
+    fname = "fig_s5_broadband_with_era5_pwrf_snowpack.pdf"
+    plt.savefig(fname, format="pdf")
+
+
 if ploteach_with_era5_pwrf_snowpack:
     # Plot the Dome C components
     crs = ["blue", "blue", "blue", "blue", "blue", "blue"]
@@ -306,6 +323,9 @@ if plotnet_with_era5_pwrf_snowpack:
     plotnet_pwrf(axes_net)
     plotnet_snowpack(axes_net)
     # plotnet_finish(axs_net)
+
+    fname = "fig_s6_net_with_era5_pwrf_snowpack.pdf"
+    # plt.savefig(fname, format="pdf")
 
 
 # if plotall:
@@ -361,52 +381,57 @@ if plotallzoom:
     #     12,
     # )
 
-plt.figure()
-plt.subplot(211)
-plt.plot(spack.dtime, spack.lwd, label="lwd, snowpack")
-plt.plot(spack.dtime, spack.lwu, label="lwu, snowpack")
-plt.plot(obs.dtime, obs.data["LWD"], "--", color="blue", label="lwd, obs")
-plt.plot(obs.dtime, obs.data["LWU"], "--", color="orange", label="lwu, obs")
-plt.legend()
-plt.ylabel("Longwave radiation (W/m2)")
+if plot_misc:
+    plt.figure()
+    plt.subplot(211)
+    plt.plot(spack.dtime, spack.lwd, label="lwd, snowpack")
+    plt.plot(spack.dtime, spack.lwu, label="lwu, snowpack")
+    plt.plot(obs.dtime, obs.data["LWD"], "--", color="blue", label="lwd, obs")
+    plt.plot(
+        obs.dtime, obs.data["LWU"], "--", color="orange", label="lwu, obs"
+    )
+    plt.legend()
+    plt.ylabel("Longwave radiation (W/m2)")
 
-plt.figure()
-plt.plot(
-    obs.dtime,
-    obs.data["LWD"] - obs.data["LWU"],
-    "--",
-    color="cyan",
-    label="lwnet, obs",
-)
-plt.plot(spack.dtime, spack.lwnet, label="lwnet snowpack")
-plt.plot(obs.dtime, np.zeros(np.shape(obs.dtime)), "k:")
-plt.legend()
-plt.ylabel("Longwave radiation (W/m2)")
+    plt.figure()
+    plt.plot(
+        obs.dtime,
+        obs.data["LWD"] - obs.data["LWU"],
+        "--",
+        color="cyan",
+        label="lwnet, obs",
+    )
+    plt.plot(spack.dtime, spack.lwnet, label="lwnet snowpack")
+    plt.plot(obs.dtime, np.zeros(np.shape(obs.dtime)), "k:")
+    plt.legend()
+    plt.ylabel("Longwave radiation (W/m2)")
 
-plt.figure()
-plt.plot(spack.dtime, spack.swd, label="swd, snowpack")
-plt.plot(spack.dtime, spack.swu, label="swu, snowpack")
-plt.plot(obs.dtime, obs.data["SWD"], "--", color="blue", label="swd, obs")
-plt.plot(obs.dtime, obs.data["SWU"], "--", color="orange", label="swu, obs")
-plt.legend()
-plt.ylabel("Shortwave radiation (W/m2)")
+    plt.figure()
+    plt.plot(spack.dtime, spack.swd, label="swd, snowpack")
+    plt.plot(spack.dtime, spack.swu, label="swu, snowpack")
+    plt.plot(obs.dtime, obs.data["SWD"], "--", color="blue", label="swd, obs")
+    plt.plot(
+        obs.dtime, obs.data["SWU"], "--", color="orange", label="swu, obs"
+    )
+    plt.legend()
+    plt.ylabel("Shortwave radiation (W/m2)")
 
-plt.figure()
-plt.plot(spack.dtime, spack.lwnet, label="lwnet snowpack")
-plt.plot(spack.dtime, spack.swnet, label="swnet, snowpack")
-plt.plot(
-    obs.dtime,
-    obs.data["LWD"] - obs.data["LWU"],
-    "--",
-    color="cyan",
-    label="lwnet, obs",
-)
-plt.plot(
-    obs.dtime,
-    obs.data["SWD"] - obs.data["SWU"],
-    "--",
-    color="black",
-    label="swnet, obs",
-)
-plt.legend()
-plt.ylabel("Shortwave radiation (W/m2)")
+    plt.figure()
+    plt.plot(spack.dtime, spack.lwnet, label="lwnet snowpack")
+    plt.plot(spack.dtime, spack.swnet, label="swnet, snowpack")
+    plt.plot(
+        obs.dtime,
+        obs.data["LWD"] - obs.data["LWU"],
+        "--",
+        color="cyan",
+        label="lwnet, obs",
+    )
+    plt.plot(
+        obs.dtime,
+        obs.data["SWD"] - obs.data["SWU"],
+        "--",
+        color="black",
+        label="swnet, obs",
+    )
+    plt.legend()
+    plt.ylabel("Shortwave radiation (W/m2)")
