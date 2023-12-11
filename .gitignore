@@ -4,8 +4,12 @@
 # and needs to be modified
 params.py
 
-# folder with obsolete code
+# folder with obsolete code or code to ignore
 obsolete
+extra
+
+# Figure folders
+figures
 
 # Python code #
 ###############
