@@ -38,39 +38,6 @@ def get_obs_swd(swd_params, esc_case) -> tuple[np.ndarray, np.ndarray]:
     return dtimes, rad
 
 
-def get_pysolar_swd(
-    swd_params, esc_params, dtimes
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Get shortwave downward radiation and forcing betwen start and end dates
-    @param  dtimes: Dates between start and end dates
-    @return   Simulated clear sky downward radiation
-    @return   Diffuse radiation according to pysolar
-    @return   Factor for diffuse radiation
-    """
-
-    # Location and time-dependent parameters
-    lat = esc_params.LATITUDE
-    lon = esc_params.LONGITUDE
-    pfac = swd_params.SW_FACTOR
-
-    # Get diffuse radiation from pysolar
-    ndates = len(dtimes)
-    diffuse = 0 * np.zeros(ndates)
-    sunalt = 0 * np.zeros(ndates)
-    for i in range(ndates):
-        thisdate = dtimes[i]
-        altitude_deg = pysolar.solar.get_altitude(lat, lon, thisdate)
-        if altitude_deg > 0:
-            diffuse[i] = pysolar.util.diffuse_underclear(lat, lon, thisdate)
-        sunalt[i] = altitude_deg
-
-    # Get factor for scaling pysolar diffuse radiance to get clear sky rad
-    diffuse_fac = np.polyval(pfac, sunalt)
-
-    return diffuse * diffuse_fac, diffuse, diffuse_fac
-
-
 def get_albedo(dayofyear) -> float:
     """
     Get the albedo based on the current datetime
@@ -125,6 +92,68 @@ def get_ozone(dtime) -> float:
         return np.mean(vals)
     else:
         return 257.53
+
+
+def do_run_libradtran(lat, lon, dtimes, outfile):
+    """
+    Get shortwave downward radiation and forcing betwen start and end dates
+    from libradtran and save to file
+    @param lat  LATITUDE
+    @param lon  LONGITUDE
+    @param  dtimes: Dates between start and end dates
+    @param outfile  File to save to
+    @return  libradtran result
+    """
+
+    librad = np.zeros([len(dtimes), 6])
+    prev_dayofyear = -1
+    with open(outfile, "w") as fid:
+        # Write header to file
+        content = "Date,direct,global,diffuse down,diffuse up,net,sum,\n"
+        fid.write(content)
+        # edir: direct irradiance
+        # eglo: global irradiance
+        # edn: diffuse downward irradiance
+        # eup: diffuse upward irradiance
+        # enet: global - upward irradiance
+        # esum: global + upward irradiance
+
+        for count, thisdate in enumerate(dtimes):
+            # Current datetime and day of year
+            dayofyear = thisdate.timetuple().tm_yday
+            dtimestr = thisdate.strftime("%Y%m%d %H:%M:%S")
+
+            # Print the date every hour
+            if thisdate.minute == 0:
+                print(dtimestr)
+
+            # Albedo
+            if dayofyear != prev_dayofyear:
+                albedo = get_albedo(dayofyear)
+            prev_dayofyear = dayofyear
+
+            # Ozone
+            ozone = get_ozone(dtimes)
+
+            # SZA
+            sunalt = pysolar.solar.get_altitude(lat, lon, thisdate)
+            sza0 = 90 - sunalt
+
+            # Run LIBRADTRAN
+            if sza0 > 120:
+                result = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+            else:
+                result = run_libradtran(dayofyear, sza0, albedo, ozone)
+
+            # Tack on the libradtran result
+            librad[count, :] = result
+            content = (
+                f"{dtimestr}, {result[0]}, {result[1]}, {result[2]}, "
+                + f"{result[3]}, {result[4]}, {result[5]},\n"
+            )
+            fid.write(content)
+
+    return librad
 
 
 def calc_libradtran(esc_params, dtimes, outfile) -> np.ndarray:
@@ -200,7 +229,7 @@ def get_libradtran(params, swd_date, clrfile, redo):
         libdate, libclear = calc_libradtran(params, swd_date, clrfile)
         swd_clear = libclear[:, 0]
     else:
-        # Load the libradtran results, which have columns: Date,swd,o2,o3,o4,o5,o6
+        # Load the libradtran results
         libclear = pd.read_csv(clrfile, delimiter=",\s")
         libdate = pd.to_datetime(libclear["Date"])
         swd_clear = libclear["swd"]
