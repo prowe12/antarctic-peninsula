@@ -121,3 +121,24 @@ def getfiles_for_daterange(
     files = np.array(filesl)
     ikeep = np.where(np.logical_and(dates >= dt1, dates <= dt2))[0]
     return [files[x] for x in ikeep], dates[ikeep]
+
+
+def getfnames_daterange_utc(
+    direc: str, fmt: str, dt1: dt.datetime, dt2: dt.datetime
+):
+    """
+    Get a list of filenames and dates for dates between two values
+    assuming UNAWARE datetimes
+    @param direc  Directory where files are
+    @param fmt  Format of file name
+    @param dt1  Desired starting date
+    @param dt2  Desired ending date
+    @return List of files between start and end dates
+    @return List of dates corresponding to files
+    """
+    filesl = get_filenames(direc, fmt)
+    datesl = [dt.datetime.strptime(f, fmt) for f in filesl]
+    dates = np.array(datesl)
+    files = np.array(filesl)
+    ikeep = np.where(np.logical_and(dates >= dt1, dates <= dt2))[0]
+    return [files[x] for x in ikeep], dates[ikeep]
