@@ -13,10 +13,6 @@ import numpy as np
 import matplotlib.colors as mcolors
 from netCDF4 import Dataset
 
-# Import params containing personal root directory
-# (this file must be created by each user)
-from antarc import params
-
 
 def plot_measured_and_clear(
     swd_date, swd, swd_clr, lwd_date, lwd, lwd_clr_date, lwd_clr, savef, fname
@@ -165,11 +161,15 @@ def plot_forcings_and_lidar(
     lwd_force,
     start_date,
     final_date,
+    lidar_dir: str,
     datefmt: str = "%H",
     xlab: str = "Hor on 2022/05/16",
     savef: bool = False,
     fname: str = "",
 ):
+    """
+    lidar_dir = f"{params.MEAS_DIR}Escudero/mpl/reprocessing/ResultNetCDF/"
+    """
 
     fig, axs = plt.subplots(2, 1, constrained_layout=True, num=4)
     # plt.figure(num=3)  # , figsize=[6.5, 5.6])
@@ -178,7 +178,7 @@ def plot_forcings_and_lidar(
     rot = 0
 
     # Plot the miniMPL data above
-    run_plotmultipanel(fig, axs[0])
+    run_plotmultipanel(fig, axs[0], lidar_dir)
 
     ax3 = axs[1]
 
@@ -263,21 +263,18 @@ def plotmultipanel(
     # ax.tick_params(axis="x", rotation=rot)
 
 
-def run_plotmultipanel(fig, axno):
+def run_plotmultipanel(fig, axno, lidar_dir):
 
-    direc = f"{params.MEAS_DIR}Escudero/mpl/reprocessing/ResultNetCDF/"
     datestring = "20220516"
     fname = f"KGI_MPLDataV2{datestring}.nc"
+    titlestr = "King George Island MPL Data Processed " + datestring
 
-    with Dataset(direc + fname) as ncid:
+    with Dataset(lidar_dir + fname) as ncid:
         # dict_keys(['DataTime', 'Range', 'CloudMask', 'PhaseMask',
         #   'CloudBaseAltitude', 'CloudBaseTemperature', 'CloudTopAltitude',
         #   'CloudTopTemperature', 'ColumnType', 'Temperature', 'CountRate',
         #   'Depolarization', 'BackscatterRatio'])
-
-        titlestr = "King George Island MPL Data Processed " + datestring
-
-        panelnames = ["Data Mask "]
+        panelnames = ["a)"]  # ["Data Mask "]
 
         #% This colortable makes the following values in the data mask a single color
         #% Take the log10 of the mask, you will get data that is colored as:
@@ -298,9 +295,9 @@ def run_plotmultipanel(fig, axno):
         combo = -999 * np.ones(ncid["PhaseMask"].shape)
         for i in range(ncid["PhaseMask"].shape[1]):
             combined = ncid["PhaseMask"][:, i] + 2
-            # TODO: uncomment
-            # if not np.all(ncid["CloudMask"][np.isnan(combined),i]):
-            #    raise ValueError("Found cloud where NaN expected")
+            # TODO: what is the following for?
+            # if not np.all(ncid["CloudMask"][np.isnan(combined), i]):
+            #     raise ValueError("Found cloud where NaN expected")
             inan = np.where(np.isnan(combined))[0]
             combined[inan] = ncid["CloudMask"][inan, i] + 0.6
             combo[:, i] = combined
@@ -315,7 +312,7 @@ def run_plotmultipanel(fig, axno):
     cticks = [cmaps[0][0][:-1] + 0.5]
     cticklabels = [["Clear", "Cloud", "Liquid", "Ice"]]
 
-    cbarfrac = 0.05
+    cbarfrac = 0.03
 
     # Create the figure
     plotmultipanel(
@@ -335,9 +332,11 @@ def run_plotmultipanel(fig, axno):
         titlestr,
     )
 
+    plt.text(3, 4, "a)")
+
     # Save the figure
     # outfig = f"KGI_{datestring}_PolarizationPrelim.png"
-    # fig.savefig(direc + outfig)
+    # fig.savefig(lidar_dir + outfig)
     # plt.close(fig=fig)
 
 
