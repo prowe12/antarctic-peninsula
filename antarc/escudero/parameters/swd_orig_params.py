@@ -24,7 +24,7 @@ STAND_FNAME_FORMAT = "esc_swd%Y%m%d_%H%M.csv"
 
 YEARS = {
     "v1": range(2016, 2023),
-    "v2": range(2022, 2023),
+    "v2": range(2022, 2024),
 }
 
 # Classes for versions
