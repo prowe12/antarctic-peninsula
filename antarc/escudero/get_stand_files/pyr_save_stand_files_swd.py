@@ -18,16 +18,17 @@ from antarc.pyr_save_stand_files import pyr_save_stand_files
 
 # SWD: pyranometer
 paramfile = "antarc.escudero.parameters.swd_orig_params"
-logging.info("SWD (pyranometer)")
-logging.info("Version 1")
-pyr_save_stand_files(paramfile, "v1", 2016)
-pyr_save_stand_files(paramfile, "v1", 2017)
-pyr_save_stand_files(paramfile, "v1", 2018)
-pyr_save_stand_files(paramfile, "v1", 2019)
-pyr_save_stand_files(paramfile, "v1", 2020)
-pyr_save_stand_files(paramfile, "v1", 2021)
-pyr_save_stand_files(paramfile, "v1", 2022)
+# logging.info("SWD (pyranometer)")
+# logging.info("Version 1")
+# pyr_save_stand_files(paramfile, "v1", 2016)
+# pyr_save_stand_files(paramfile, "v1", 2017)
+# pyr_save_stand_files(paramfile, "v1", 2018)
+# pyr_save_stand_files(paramfile, "v1", 2019)
+# pyr_save_stand_files(paramfile, "v1", 2020)
+# pyr_save_stand_files(paramfile, "v1", 2021)
+# pyr_save_stand_files(paramfile, "v1", 2022)
 
 logging.info("")
 logging.info("Version 2")
-pyr_save_stand_files(paramfile, "v2", 2022)
+# pyr_save_stand_files(paramfile, "v2", 2022)
+pyr_save_stand_files(paramfile, "v2", 2023)
