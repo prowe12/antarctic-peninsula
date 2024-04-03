@@ -14,9 +14,8 @@ import time
 import datetime as dt
 import pandas as pd
 from scipy import interpolate
-import scipy.ndimage as ndimage
-import matplotlib.pyplot as plt
-from netCDF4 import Dataset, num2date, date2num, date2index
+from scipy import ndimage
+from netCDF4 import Dataset, num2date, date2num
 import numpy as np
 import numpy.typing as npt
 
@@ -152,7 +151,7 @@ class Sonde:
             or (np.isnan(self.h2o[0]))
             or (np.isnan(self.rh[0]))
         ):
-            print("add code here")
+            raise ValueError("Nans found in sounding")
 
         datediff = (
             dt.datetime.strptime(srf["date"], "%Y-%m-%d %H:%M:%S") - self.date
@@ -164,18 +163,14 @@ class Sonde:
 
         elif abs(datediff.total_seconds()) / 3600 < 4:  # 0.25:
             # Make sure surface data ~agrees with surface met data
-            if srf["alt"] < self.z[0]:
-                raise ValueError("met alt is lower than lowest sonde height")
             iht = np.where(self.z < 0.6)[0]  # lowest 600 m
             sndtemp = np.interp(srf["alt"], self.z[iht], self.T[iht])
             sndpress = np.interp(srf["alt"], self.z[iht], self.P[iht])
             sndrhw = np.interp(srf["alt"], self.z[iht], self.rh[iht])
 
             if abs(datediff.total_seconds()) / 3600 > 0.25:
-                raise ValueError("Big time diff from met; check this")
-
-            # TODO
-            # Use the hypsometric equation to interpolate to the sonde height
+                ddiff = round(abs(datediff.total_seconds()) / 3600, 2)
+                print(f"  sonde and Frei met times differ by {ddiff} min")
 
             if (
                 np.abs(sndtemp - srf["temp"]) > 2
@@ -199,7 +194,6 @@ class Sonde:
 
         # Do not allow any NaNs in pressure
         if any(np.isnan(self.P)):
-            # TODO: fix this
             raise ValueError("One or more pressures is nan")
 
         # Heights must increase with time
@@ -271,7 +265,7 @@ class Sonde:
             dztop = self.z[imiss[-1]] - zfill[-1]
             if dztop > 0.600 or dztop < -0.600:
                 raise ValueError("Bad interpolation with hypsometric eqn")
-            elif dztop < 0 or (self.z[imiss[-1]] - zfill[-1] > 2 * mean_dz):
+            if dztop < 0 or (self.z[imiss[-1]] - zfill[-1] > 2 * mean_dz):
                 # Adjust altitudes so max difference is ~mean_dz
                 adj = np.linspace(0, dztop, len(zfill))
                 zfill += adj
@@ -347,6 +341,92 @@ class CarbonTracker:
         Load co2 data nc file
         """
 
+        self.co2 = np.nan
+        self.T = np.nan
+        self.P = np.nan
+        self.zbnd = np.nan
+        self.z = np.nan
+
+        if date < min(co2Files.dates):
+            msg = f"Desired date {date} is before first carbontracker date"
+            raise ValueError(msg + f"{min(co2Files.dates)}")
+        if date <= max(co2Files.dates):
+            (
+                self.co2,
+                self.T,
+                self.P,
+                self.zbnd,
+                self.z,
+            ) = self.get_carbon_tracker(co2Files, date, lat, lon)
+
+        elif date > max(co2Files.dates):
+            (
+                self.co2,
+                self.T,
+                self.P,
+                self.zbnd,
+                self.z,
+            ) = self.estimate_carbon_tracker(co2Files, date, lat, lon)
+        else:
+            raise ValueError(f"date {date} is not as expected")
+
+    def estimate_carbon_tracker(self, co2Files, date, lat, lon):
+        """
+        If the carbon tracker data is not yet available for the given
+        date, estimate it from the previous two years. For CO2, add
+        the change to the previous year. For other values, use the average"
+        """
+
+        # Get carbon tracker data from the prior year
+        prior_date = dt.datetime(
+            date.year - 1,
+            date.month,
+            date.day,
+            date.hour,
+            date.minute,
+            date.second,
+        )
+        (
+            co2,
+            temp,
+            press,
+            alt,
+            zlayer,
+        ) = self.get_carbon_tracker(co2Files, prior_date, lat, lon)
+
+        # And from the year before that
+        priorprior_date = dt.datetime(
+            date.year - 2,
+            date.month,
+            date.day,
+            date.hour,
+            date.minute,
+            date.second,
+        )
+        (
+            co2_p,
+            temp_p,
+            _,
+            _,
+            zlayer_p,
+        ) = self.get_carbon_tracker(co2Files, priorprior_date, lat, lon)
+
+        # Put on same grid
+        if np.any(np.diff(zlayer_p) <= 0) or np.any(np.diff(zlayer) <= 0):
+            raise ValueError("Carbontracker alts must decrease monotonically!")
+        co2_p = np.interp(zlayer, zlayer_p, co2_p)
+
+        # Assume the CO2 went up at the same rate
+        co2 += co2 - co2_p
+        # Use average for temperature and prior year pressure
+        temp = np.mean([temp, np.interp(zlayer, zlayer_p, temp_p)], 0)
+
+        return co2, temp, press, alt, zlayer
+
+    def get_carbon_tracker(self, co2Files, date, lat, lon):
+        """
+        Read in carbontracker data from nearest-in-time files
+        """
         # Find closest date
         iaft = bisect(co2Files.dates, date)
         ibef = iaft - 1
@@ -363,11 +443,9 @@ class CarbonTracker:
 
         # Open the netcdf co2 file and get the data
         with Dataset(co2Files.dir + co2Files.files[ibef], "r") as nci:
-            """
             # nci['co2'].shape
             # Out[32]: (8,    25,   90, 120)
             #         time, level, lat, lon
-            """
             nlev = nci["level"].shape[0]
             nbound = nci["boundary"][:].shape[0]
             lats = nci["latitude"][:]
@@ -376,14 +454,12 @@ class CarbonTracker:
                 nci.variables["time"][:], nci.variables["time"].units
             )
 
-            """
             # Verify it worked
-            print('units = %s, values = %s' % (nci.variables['time'].units, 
-                                               nci.variables['time'][:]))
-            print(nci['time_components'][:])
-            print(dates)
-            print([date.strftime('%Y-%m-%d %H:%M:%S') for date in dates])
-            """
+            # print('units = %s, values = %s' % (nci.variables['time'].units,
+            #                                    nci.variables['time'][:]))
+            # print(nci['time_components'][:])
+            # print(dates)
+            # print([date.strftime("%Y-%m-%d %H:%M:%S") for date in dates])
 
             if max(dates) < date:
                 # Glom on the last with the first
@@ -434,12 +510,15 @@ class CarbonTracker:
 
             del nlev, nbound, lats, lons
 
-            self.co2 = co2
-            self.T = temp
-            self.P = press / 100
-            self.zbnd = alt / 1000
+        #     self.co2 = co2
+        #     self.T = temp
+        #     self.P = press / 100
+        #     self.zbnd = alt / 1000
+        press = press / 100
+        alt = alt / 1000
+        zlayer = alt[:-1] + np.diff(alt) / 2
 
-        self.z = self.zbnd[:-1] + np.diff(self.zbnd) / 2
+        return co2, temp, press, alt, zlayer
 
 
 # # # # # # #     Profile     # # # # # # #
@@ -543,17 +622,15 @@ class Prof:
                 self.z[self.z > new.z[-1]],
             )
 
-        """
-        igood = np.where(np.isnan(prof.co2)==False)[0]
-        should_be_done = False
-        for i in range(len(prof.co2)):
-            if np.isnan(prof.co2[i]):
-                if should_be_done:
-                    raise NameError('Should be done with NaNs in CO2')
-                prof.co2[i] = prof.co2[igood[0]]
-            else:
-                should_be_done = True
-        """
+        # igood = np.where(np.isnan(prof.co2)==False)[0]
+        # should_be_done = False
+        # for i in range(len(prof.co2)):
+        #     if np.isnan(prof.co2[i]):
+        #         if should_be_done:
+        #             raise NameError('Should be done with NaNs in CO2')
+        #         prof.co2[i] = prof.co2[igood[0]]
+        #     else:
+        #         should_be_done = True
 
     def set_n_scale(self, attr_name, new, surf_value):
         """
@@ -736,7 +813,7 @@ class Prof:
                 "Met height is below sounding surface height. "
                 + "Add code to interpolate to sounding surface."
             )
-        elif (zmet == zsurf) or (zmet > self.z[iht[-1]]):
+        if (zmet == zsurf) or (zmet > self.z[iht[-1]]):
             raise ValueError("Modify code for this possibility")
 
         # Interpolate the sonde temperature to the height of the met temp
@@ -766,22 +843,20 @@ class Prof:
             # falloff = np.linspace(1, 0, len(iht))
             # self.T[iht] = falloff * tnew + (1 - falloff) * self.T[iht]
 
-    """
-    def set_upper_P_carbonTracker(self, new, old_attr_name, new_attr_name):
-        # Get the old and new values to work with
-        old_val = getattr(self, old_attr_name)
-        new_val = getattr(new, new_attr_name)
-        
-        # Do the spline interpolation 
-        tck = interpolate.splrep(new.zbnd, new_val)
-        new_val = interpolate.splev(self.z, tck)
-        
-        inds = np.intersect1d(np.where(self.z >= new.zbnd[0])[0],
-                              np.where(self.z <= new.zbnd[-1])[0])
-        inds = np.intersect1d(inds, np.where(np.isnan(old_val)))
-        old_val[inds] = new_val[inds]
-        #setattr(self, old_attr_name, old_val)
-    """
+    # def set_upper_P_carbonTracker(self, new, old_attr_name, new_attr_name):
+    #     # Get the old and new values to work with
+    #     old_val = getattr(self, old_attr_name)
+    #     new_val = getattr(new, new_attr_name)
+
+    #     # Do the spline interpolation
+    #     tck = interpolate.splrep(new.zbnd, new_val)
+    #     new_val = interpolate.splev(self.z, tck)
+
+    #     inds = np.intersect1d(np.where(self.z >= new.zbnd[0])[0],
+    #                           np.where(self.z <= new.zbnd[-1])[0])
+    #     inds = np.intersect1d(inds, np.where(np.isnan(old_val)))
+    #     old_val[inds] = new_val[inds]
+    #     #setattr(self, old_attr_name, old_val)
 
     def write_to_netcdf_file(self, outputfile):
         """
@@ -1106,19 +1181,6 @@ def get_files(direc: str, fmt: str):
     return get_filenames_dates(direc, fmt)
 
 
-# def get_files(directory, sample_filename, i1, i2, fstr):
-# files = os.listdir(directory)
-# files.sort()
-# # files = filter(lambda x: len(x)==len(sample_filename), files)
-# files = [
-#     x
-#     for x in files
-#     if len(x) == len(sample_filename) and (x[:6] == sample_filename[:6])
-# ]
-# file_n_date = map(lambda f: (f, datetime.strptime(f[i1:i2], fstr)), files)
-# return tuple(file_n_date)
-
-
 def map_interp(amat, date, lat, lon, dates, lats, lons):
     """
     Interpolate to lat/lon/date
@@ -1221,36 +1283,62 @@ def get_surface_temp_frei(surfmetFiles, sonde_date):
 
 def get_surface_met_tarp(surfmetFiles, sonde_date):
     """
-    Get surface temperatures from file corresponding to date of
-    current sounding.
+    Get surface met from file corresponding to date of current sounding.
     """
 
-    # TODO: fix
     ism = bisect_right(surfmetFiles.dates, sonde_date) - 1
     metfname = surfmetFiles.dir + surfmetFiles.files[ism]
 
-    raise ValueError("Need to fix this for json file!")
-    with Dataset(metfname, "r", format="NETCDF4") as nci:
-        itime = date2index(sonde_date, nci.variables["time"], select="after")
+    dfm = pd.read_csv(metfname)
+    dtime = [dt.datetime.strptime(x, "%Y-%m-%d %H:%M:%S") for x in dfm["Date"]]
+    itime = bisect_right(dtime, sonde_date) - 1
 
-        if (itime == 0) or (sonde_date == nci.variables["time"][itime]):
-            tmet = nci.variables["temp_mean"][itime] + 273.15
-        else:
-            surf_time = num2date(
-                nci.variables["time"][:], nci.variables["time"].units
-            )
-            ddate = surf_time[itime - 1 : itime + 1] - sonde_date
-            dmin = [d.days * 24 * 60 + d.seconds / 60 for d in ddate]
-            wts = np.flipud(np.abs(dmin))
-            wts = wts / np.sum(wts)
-            tmet = (
-                wts[0] * nci.variables["temp_mean"][itime - 1]
-                + wts[1] * nci.variables["temp_mean"][itime]
-                + 273.15
-            )
-        # zmet = nci["alt"][:] / 1000
+    # Check for nans. Return non-nan value if available, otherwise nan
+    if np.isnan(dfm["Temperature(C)"][itime - 1]) and np.isnan(
+        dfm["Temperature(C)"][itime]
+    ):
+        return get_surf_itime(dfm, itime)
+    if np.isnan(dfm["Temperature(C)"][itime - 1]):
+        return get_surf_itime(dfm, itime)
+    if np.isnan(np.isnan(dfm["Temperature(C)"][itime])):
+        return get_surf_itime(dfm, itime - 1)
 
-    return tmet
+    if (itime == 0) or (sonde_date == dtime[itime]):
+        return get_surf_itime(dfm, itime)
+
+    return get_surf_wtd_itimes(dfm, dtime, itime, sonde_date)
+
+
+def get_surf_wtd_itimes(dfm, dtime, itime, sonde_date):
+    ddate = [dtime[x] - sonde_date for x in range(itime - 1, itime + 1)]
+    dmin = [d.days * 24 * 60 + d.seconds / 60 for d in ddate]
+    wts = np.flipud(np.abs(dmin))
+    wts = wts / np.sum(wts)
+
+    surf = {}
+    surf["date"] = dfm["Date"][itime]
+    surf["temp"] = (
+        wts[0] * dfm["Temperature(C)"][itime - 1]
+        + wts[1] * dfm["Temperature(C)"][itime]
+        + 273.15
+    )
+    surf["rhw"] = (
+        wts[0] * dfm["RH(%)"][itime - 1] + wts[1] * dfm["RH(%)"][itime]
+    )
+    surf["press"] = (
+        wts[0] * dfm["Pressure(hPa)"][itime - 1]
+        + wts[1] * dfm["Pressure(hPa)"][itime]
+    )
+    return surf
+
+
+def get_surf_itime(dfm, itime):
+    surf = {}
+    surf["date"] = dfm["Date"][itime]
+    surf["temp"] = dfm["Temperature(C)"][itime] + 273.15
+    surf["rhw"] = dfm["RH(%)"][itime]
+    surf["press"] = dfm["Pressure(hPa)"][itime]
+    return surf
 
 
 def get_surf_met(surfmetFiles, sonde_date, surfmet_type: str):
@@ -1308,3 +1396,16 @@ def get_surf_met(surfmetFiles, sonde_date, surfmet_type: str):
 #             # else:
 #             #    self.first = current
 #             #    return 0.0
+
+
+# def get_files(directory, sample_filename, i1, i2, fstr):
+# files = os.listdir(directory)
+# files.sort()
+# # files = filter(lambda x: len(x)==len(sample_filename), files)
+# files = [
+#     x
+#     for x in files
+#     if len(x) == len(sample_filename) and (x[:6] == sample_filename[:6])
+# ]
+# file_n_date = map(lambda f: (f, datetime.strptime(f[i1:i2], fstr)), files)
+# return tuple(file_n_date)
