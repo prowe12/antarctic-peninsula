@@ -31,7 +31,7 @@ ERA_DIR = MEAS_DIR + "Escudero/era5/"
 OUT_DIR = MEAS_DIR + "Escudero/profiles/"
 FIG_DIR = MEAS_DIR + "Escudero/profiles//figures/"
 FREI_MET_DIR = MEAS_DIR + "Escudero/frei_met/by_month_every_15min/"
-TARP_MET_DIR = MEAS_DIR + "Escudero/aws/json_daily_backup/"
+TARP_MET_DIR = MEAS_DIR + "Escudero/aws/std/"
 CO2_DIR = MEAS_DIR + "Escudero/co2/"
 CT_DIR = {
     2017: MEAS_DIR + "Escudero/co2/ct_2022/",
@@ -56,7 +56,7 @@ CO2_FILE_DRAKE = CO2_DIR + "co2_drp_shipboard-flask_1_ccgg_event.txt"
 # FREI_MET_FILE = "esc_met_201901.txt"
 # TARP_MET_FILE = "950007_20210215.json"
 
-TARP_MET_FILEFORMAT = "950007_%Y%m%d.json"
+TARP_MET_FILEFORMAT = "tarp02_met_%Y%m.txt"
 
 # FREI
 FREI_MET_FILEFORMAT = "esc_met_%Y%m.txt"
