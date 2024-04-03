@@ -22,7 +22,7 @@ ORIG_TIME_FMT = "%H:%M:%S"
 
 STAND_FNAME_FORMAT = "esc_lwd%Y%m%d_%H%M.csv"
 
-YEARS = {"v1": range(2017, 2023), "v2": range(2022, 2023)}
+YEARS = {"v1": range(2017, 2023), "v2": range(2022, 2024)}
 
 # Classes for versions
 CLASSNAMES = {"v1": "LwdStandFilesFromOrigV1", "v2": "LwdStandFilesFromOrigV2"}
