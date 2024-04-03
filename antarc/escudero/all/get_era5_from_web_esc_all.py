@@ -12,9 +12,8 @@ entire Escudero period.
 import numpy as np
 
 from antarc.escudero.parameters import esc_params
-from antarc.escudero.parameters import esc202202
 from antarc.get_era5_from_web import get_paramsets, get_era5
-import datetime as dt, calendar
+import calendar
 
 # Parameter modules, specific to user
 from antarc import params
@@ -66,7 +65,7 @@ download_flag = True
 # 2023: 1, 2, 3, 4, 5, 6, 7: Done and transferred, in progress: 8
 years = [2023]
 for year in years:
-    for month in range(4, 9):
+    for month in range(8, 9):
 
         yearstr = str(year)
         monthstr = str(month).zfill(2)
