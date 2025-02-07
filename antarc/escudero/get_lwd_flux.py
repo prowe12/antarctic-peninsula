@@ -91,9 +91,10 @@ def get_lwd_clear(esc_case, lwd_params):
     fmt_hi = lwd_params.LWD_CLEAR_FILEFORMAT_HINU
 
     # Extend date range by 1 day on either side
-    utc = dt.timezone.utc
-    date1 = dt.datetime(date1.year, date1.month, date1.day - 4, tzinfo=utc)
-    date2 = dt.datetime(date2.year, date2.month, date2.day + 2, tzinfo=utc)
+    # utc = dt.timezone.utc
+    date1 = dt.datetime(date1.year, date1.month, date1.day - 4)
+    date2 = dt.datetime(date2.year, date2.month, date2.day + 2)
+    # , tzinfo=utc)
 
     # Get the filenames for all calculated clear-sky LWD fluxes between
     # the date1 and date2 for each set of wavenumbers (low and high, giving
