@@ -7,6 +7,8 @@ params.py
 # folder with obsolete code or code to ignore
 obsolete
 extra
+old
+quality_control
 
 # Figure folders
 figures
