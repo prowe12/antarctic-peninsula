@@ -52,9 +52,7 @@ def load_rad_flux(
         ntimes = len(pir)
         fmt = "%Y-%m-%d%H:%M:%S"
         dtimes0 = [
-            dt.datetime.strptime(pir["Date"][i] + pir["Time"][i], fmt).replace(
-                tzinfo=pytz.utc
-            )
+            dt.datetime.strptime(pir["Date"][i] + pir["Time"][i], fmt)
             for i in range(ntimes)
         ]
         dtimes = np.hstack([dtimes, dtimes0])
@@ -67,7 +65,7 @@ def load_rad_flux(
 
 def load_rad_flux_utc(
     direc: str, fmt: str, start_dt: dt.datetime, end_dt: dt.datetime
-) -> tuple[np.ndarray, np.ndarray]:
+) -> tuple[list[dt.datetime], list[float]]:
     """
     Load all downward radiative flux data between two dates
     assuming all dates are already in UTC, and thus we can use
@@ -93,22 +91,55 @@ def load_rad_flux_utc(
     if len(files_wo_direc) != len(set(files_wo_direc)):
         raise ValueError("Same file found in two different directories")
 
+    if len(files) == 0:
+        return [], []
+
+    fmt = "%Y-%m-%d%H:%M:%S"
+
+    # # Speed test: numpy arrays
+    # import time
+
+    # tstart = time.time()
+    # dtimes = np.array([])
+    # flux = np.array([])
+    # for i, file in enumerate(files):
+    #     pir = pd.read_csv(file)
+
+    #     # Get dates from pyranometer file data
+    #     dtimes0 = [
+    #         dt.datetime.strptime(pir["Date"][i] + pir["Time"][i], fmt)
+    #         for i in range(len(pir))
+    #     ]
+    #     dtimes = np.hstack([dtimes, dtimes0])
+    #     flux = np.hstack([flux, pir["Radiation"].values])
+    # inds = np.where(np.logical_and(dtimes >= start_dt, dtimes <= end_dt))[0]
+    # print(time.time() - tstart)
+    # return dtimes[inds], flux[inds]
+
     # Load the pyranometer data
-    dtimes = np.array([])
-    flux = np.array([])
+    # tstart = time.time()
+    dtimes = []
+    flux = []
     for i, file in enumerate(files):
         pir = pd.read_csv(file)
 
         # Get dates from pyranometer file data
-        ntimes = len(pir)
-        fmt = "%Y-%m-%d%H:%M:%S"
         dtimes0 = [
             dt.datetime.strptime(pir["Date"][i] + pir["Time"][i], fmt)
-            for i in range(ntimes)
+            for i in range(len(pir))
         ]
-        dtimes = np.hstack([dtimes, dtimes0])
-        flux = np.hstack([flux, pir["Radiation"].values])
+        dtimes += dtimes0
+        flux += pir["Radiation"].tolist()
+    try:
+        if dtimes[0] < start_dt or dtimes[-1] > end_dt:
+            flux = [
+                x
+                for i, x in enumerate(flux)
+                if dtimes[i] >= start_dt and dtimes[i] <= end_dt
+            ]
+            dtimes = [x for x in dtimes if x >= start_dt and x <= end_dt]
+    except:
+        print()
+    # print(time.time() - tstart)
 
-    inds = np.where(np.logical_and(dtimes >= start_dt, dtimes <= end_dt))[0]
-
-    return dtimes[inds], flux[inds]
+    return dtimes, flux
