@@ -49,7 +49,6 @@ from antarc.escudero.all.results.plot_broadband_esc_pwrf_era5_case_rsrc import (
     get_era5_atgridpts,
 )
 
-from antarc.escudero.all.results.params import SAVEFIGS, SAVEDIR
 from antarc.escudero.all.results.get_event_flux_rsrc import (
     get_event_flux,
     get_event_forcing,
@@ -63,7 +62,7 @@ get_era5_broadband_monthly_warm = (
 )
 
 
-# from antarc.escudero.all.analysis_rsrc import ave_over_every_hour
+from antarc.escudero.all.results.params import SAVEFIGS, SAVEDIR
 
 
 def get_frei_temps(start, event_hours):
