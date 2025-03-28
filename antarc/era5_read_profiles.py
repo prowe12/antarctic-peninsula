@@ -237,3 +237,60 @@ def load_era(fname: str):
             vmat = None
 
         return lats, lons, dates, press, zmat, tmat, rhmat, o3mat, umat, vmat
+
+
+def read_era5_profiles_monthly(fname: str, lat: float, lon: float, date):
+    """
+    Interpolate the ERA data to the given lat, lon, and datetime
+    @param era  A dictionary of the era data
+    @param lat  The latitude
+    @param lon  The longitude
+    @returns  A new dictionary containing the interpolated data
+    """
+    lats, lons, dates, press, tmat, rhmat = load_era_monthly(fname)
+
+    era = {"press": press}
+
+    era["temp"] = map_interp(tmat, date, lat, lon, dates, lats, lons)
+    era["rhw"] = map_interp(rhmat, date, lat, lon, dates, lats, lons)
+
+    return era
+
+
+def load_era_monthly(fname: str):
+    """
+    Load ERA5 data
+    @param  fname  ERA5 file name
+    """
+    with Dataset(fname, "r", format="NETCDF4") as nci:
+        # Variables, for convenience
+        # 'longitude', 'latitude', 'level', 'time', 't', 'r'
+        # Dimensions for t, r, o3, z:
+        # (time, level, latitude, longitude)
+        lats = nci["latitude"][:]
+        lons = nci["longitude"][:]
+        dates = num2date(
+            nci["time"][:], nci["time"].units, nci["time"].calendar
+        )
+
+        # Check units
+        # Expected variables and units
+        expectedvars = {
+            "level": "millibars",
+            "t": "K",
+            "r": "%",
+        }
+
+        # For now, allow for case where u/v are missing
+        # (but print file names so we can replace them)
+        for exptd in expectedvars:
+            if nci[exptd].units != expectedvars[exptd]:
+                msg1 = "Expected units of " + expectedvars[exptd] + " for "
+                msg2 = exptd + ", but got " + nci[exptd].units
+                raise ValueError(msg1 + msg2)
+
+        press = nci["level"][:]
+        tmat = nci["t"][:]
+        rhmat = nci["r"][:]
+
+        return lats, lons, dates, press, tmat, rhmat
