@@ -62,9 +62,17 @@ def read_era5_broadband_down_by_file(
     ncid.variables.keys()
     ncid["ssrd_tosta"]
     """
+
+    if date1.year != date2.year:
+        raise ValueError("ERA5 dates must all fall within a year")
+
     # Get all filenames in between date1 and date2
     fmt = direc + "era5_esc_broadband_*[0-9]*.nc"
     files = glob.glob(fmt)
+
+    if len(files) == 0:
+        return None
+
     islash = files[0].rfind("/")
     files = [f[islash + 1 :] for f in files]
 
@@ -79,7 +87,8 @@ def read_era5_broadband_down_by_file(
         if date1 <= thisdate <= date2:
             erafiles.append(fname)
 
-    era5 = {"dates": []}
+    era5 = {}
+    init = True
     for fname in erafiles:
         with Dataset(direc + fname, "r") as nci:
             era_date = num2date(
@@ -88,23 +97,37 @@ def read_era5_broadband_down_by_file(
                 only_use_python_datetimes=True,
                 only_use_cftime_datetimes=False,
             )
-            if "dates" not in era5:
+            if init:
                 era5["dates"] = era_date
+                era5["swd"] = nci["ssrd"][:]
+                era5["lwd"] = nci["strd"][:]
+                era5["swd_clr"] = nci["ssrdc"][:]
+                era5["lwd_clr"] = nci["strdc"][:]
+                era5["lat"] = nci["latitude"][:]
+                era5["lon"] = nci["longitude"][:]
+                init = False
             else:
                 era5["dates"] = np.hstack([era5["dates"], era_date])
-            if "lat" not in era5:
-                era5["lat"] = nci["latitude"][:]
-            if "lon" not in era5:
-                era5["lon"] = nci["longitude"][:]
-            if "swd" not in era5:
-                era5["swd"] = nci["ssrd"][:]
-            else:
                 era5["swd"] = np.vstack([era5["swd"], nci["ssrd"][:]])
-            if "lwd" not in era5:
-                era5["lwd"] = nci["strd"][:]
-            else:
                 era5["lwd"] = np.vstack([era5["lwd"], nci["strd"][:]])
+                era5["swd_clr"] = np.vstack([era5["swd_clr"], nci["ssrdc"][:]])
+                era5["lwd_clr"] = np.vstack([era5["lwd_clr"], nci["strdc"][:]])
+
+            # if "dates" not in era5:
+            #     era5["dates"] = era_date
+            # else:
+            #     era5["dates"] = np.hstack([era5["dates"], era_date])
+            # if "swd" not in era5:
+            #     era5["swd"] = nci["ssrd"][:]
+            # else:
+            #     era5["swd"] = np.vstack([era5["swd"], nci["ssrd"][:]])
+            # if "lwd" not in era5:
+            #     era5["lwd"] = nci["strd"][:]
+            # else:
+            #     era5["lwd"] = np.vstack([era5["lwd"], nci["strd"][:]])
 
     era5["swd"] = era5["swd"] / 3600
     era5["lwd"] = era5["lwd"] / 3600
+    era5["swd_clr"] /= 3600
+    era5["lwd_clr"] /= 3600
     return era5
