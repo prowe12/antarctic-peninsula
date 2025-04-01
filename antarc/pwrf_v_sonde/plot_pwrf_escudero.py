@@ -27,16 +27,16 @@ if year == 2018:
     pwrf_date = "20181205_08"
     pwrf_date_fmt = "%Y%m%d_08"
     esc_dir = meas_dir + "Escudero/radiosondes/datadenial/v0/"
-
+    version = 0
     esc_snd_files = [
-        "esc_sonde_dd_v0_2018120523.txt",
-        "esc_sonde_dd_v0_2018120612.txt",
-        "esc_sonde_dd_v0_2018120614.txt",
-        "esc_sonde_dd_v0_2018120617.txt",
-        "esc_sonde_dd_v0_2018120623.txt",
-        "esc_sonde_dd_v0_2018120723.txt",
-        "esc_sonde_dd_v0_2018120823.txt",
-        "esc_sonde_dd_v0_2018120923.txt",
+        f"esc_sonde_dd_v{version}_2018120523.txt",
+        f"esc_sonde_dd_v{version}_2018120612.txt",
+        f"esc_sonde_dd_v{version}_2018120614.txt",
+        f"esc_sonde_dd_v{version}_2018120617.txt",
+        f"esc_sonde_dd_v{version}_2018120623.txt",
+        f"esc_sonde_dd_v{version}_2018120723.txt",
+        f"esc_sonde_dd_v{version}_2018120823.txt",
+        f"esc_sonde_dd_v{version}_2018120923.txt",
     ]
     esc_date_strs = [
         "2018/12/05 23 UT",
@@ -55,14 +55,15 @@ else:
     pwrfdir = "Feb_2022/pwrf_stations/"
     pwrf_date = "20220206_09"
     pwrf_date_fmt = "%Y%m%d_09"
-    esc_dir = meas_dir + "Escudero/radiosondes/datadenial/"
+    esc_dir = f"{meas_dir}Escudero/radiosondes/datadenial/{year}/"
+    version = 2
 
     esc_snd_files = [
-        "esc_sonde_dd_v1_2022020700.txt",
-        "esc_sonde_dd_v1_2022020712.txt",
-        "esc_sonde_dd_v1_2022020800.txt",
-        "esc_sonde_dd_v1_2022020823.txt",
-        "esc_sonde_dd_v1_2022020912.txt",
+        f"esc_sonde_dd_v{version}_2022020700.txt",
+        f"esc_sonde_dd_v{version}_2022020712.txt",
+        f"esc_sonde_dd_v{version}_2022020800.txt",
+        f"esc_sonde_dd_v{version}_2022020823.txt",
+        f"esc_sonde_dd_v{version}_2022020912.txt",
     ]
 
     esc_date_strs = [
@@ -72,7 +73,7 @@ else:
         "2022/02/08 23 UT",
         "2022/02/09 12 UT",
     ]
-    esc_sndfile_fmt = "esc_sonde_dd_v1_%Y%m%d%H.txt"
+    esc_sndfile_fmt = f"esc_sonde_dd_v{version}_%Y%m%d%H.txt"
 
 
 pwrfdir = main_dir + pwrfdir
@@ -102,17 +103,8 @@ escPwrf1.trim(escSnd1.lev)
 escPwrf2 = Pwrf(escPwrfAll, escSnd2.dtime)
 escPwrf2.trim(escSnd2.lev)
 
-# iesc1 = escPwrf.get_timeind(escSnd1.dtime)
-# iesc2 = escPwrf.get_timeind(escSnd2.dtime)
-
-# Get difference statistics: max, min, mean, rms difference
-esc1_dtemp, esc1_drh, esc1_dwind = escSnd1.get_diffs(escPwrf1)
-esc2_dtemp, esc2_drh, esc2_dwind = escSnd2.get_diffs(escPwrf2)
-
-
 # Make the figure with winds
-plt.close(3)
-plt.figure(num=3)
+plt.figure(num=3, clear=True)
 ax1 = plt.subplot(321)
 ax2 = plt.subplot(322, sharey=ax1)
 ax3 = plt.subplot(323, sharey=ax1)
@@ -183,6 +175,14 @@ ax1.set_yticks(
     [1000, 600, 400, 300, 200, 100],
     labels=["1000", "600", "400", "300", "200", "100"],
 )
+
+
+# iesc1 = escPwrf.get_timeind(escSnd1.dtime)
+# iesc2 = escPwrf.get_timeind(escSnd2.dtime)
+
+# Get difference statistics: max, min, mean, rms difference
+esc1_dtemp, esc1_drh, esc1_dwind = escSnd1.get_diffs(escPwrf1)
+esc2_dtemp, esc2_drh, esc2_dwind = escSnd2.get_diffs(escPwrf2)
 
 
 print()
