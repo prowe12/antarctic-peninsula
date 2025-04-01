@@ -11,7 +11,7 @@ A codebase for analyzing measurements made on the Antarctic Peninsula.
   - Penny Rowe (https://github.com/prowe12)
 
 ## License
-Copyright (C) 2022 Penny Rowe 
+Copyright (C) 2022-2025 Penny Rowe 
 
 Acknowledge use by including the statement "By Penny Rowe - Own work, GNU GPLv3, https://github.com/prowe12/antarctic-peninsula.
 
