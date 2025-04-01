@@ -6,11 +6,15 @@ Created on Fri Jul  1 15:46:52 2022
 @author: prowe
 """
 
+from antarc import params
+
+
 # Directories
-STAND_DIR = "/Users/prowe/sync/measurements/Escudero/pyranometer/stand/"
+MEAS_DIR = params.MEAS_DIR
+STAND_DIR = MEAS_DIR + "Escudero/pyranometer/stand/"
 ORIG_DIR = {
-    "v1": "/Users/prowe/sync/measurements/Escudero/pyranometer/orig_v1/",
-    "v2": "/Users/prowe/sync/measurements/Escudero/pyranometer/orig_v2/",
+    "v1": MEAS_DIR + "Escudero/pyranometer/orig_v1/",
+    "v2": MEAS_DIR + "Escudero/pyranometer/orig_v2/",
 }
 
 # Parameters for pyranometer data files (shortwave downwelling)
