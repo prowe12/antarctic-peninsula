@@ -6,9 +6,13 @@ Created on Fri Jul  1 15:46:52 2022
 @author: prowe
 """
 
+from antarc import params
+
+
 # Directories
-LWD_DIR = "/Users/prowe/sync/measurements/Escudero/pyrgeometer/stand/"
-LWD_CLEAR_DIR = "/Users/prowe/Sync/measurements/Escudero/lwd_clear/"
+MEAS_DIR = params.MEAS_DIR
+LWD_DIR = MEAS_DIR + "Escudero/pyrgeometer/stand/"
+LWD_CLEAR_DIR = MEAS_DIR + "measurements/Escudero/lwd_clear/"
 
 # Files and formats
 LWD_FILEFORMAT = "esc_lwd%Y%m%d_%H%M.csv"

@@ -7,12 +7,13 @@ Created on Thu Jul 14 11:22:11 2022
 
 """
 
+from antarc import params
+
+MEAS_DIR = params.MEAS_DIR
 STATION = 950001
-DIREC_BY_HOUR = "/Users/prowe/sync/measurements/Escudero/frei_met/by_hour/"
-DIREC_BY_MINUTE = "/Users/prowe/sync/measurements/Escudero/frei_met/by_minute/"
-DIR_15MIN = (
-    "/Users/prowe/sync/measurements/Escudero/frei_met/by_month_every_15min/"
-)
+DIREC_BY_HOUR = MEAS_DIR + "Escudero/frei_met/by_hour/"
+DIREC_BY_MINUTE = MEAS_DIR + "Escudero/frei_met/by_minute/"
+DIR_15MIN = MEAS_DIR + "Escudero/frei_met/by_month_every_15min/"
 PFIX = "esc_met_"
 EXT = ".csv"
 
