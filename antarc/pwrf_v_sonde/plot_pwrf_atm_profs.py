@@ -56,7 +56,7 @@ save_dir = main_dir
 # Flag for whether to save the resulting figure
 # See the if savefig block to see where the figure will be saved to
 # (usually savedir)
-savefig = True
+savefig = False
 
 
 pwrfdirs = [
@@ -328,11 +328,14 @@ ax3.set_xlabel("RH (%)")
 ax3.set_xlim([0, 120])
 ax3.text(5, 850, "b")
 
-upwnd_era_windspeed = np.sqrt(upwndEra.uwind**2 + upwndEra.vwind**2)
-iwnd = np.where(~np.isnan(upwndSnd.wspeed))[0]
-ax5.semilogy(upwndPwrf.wind, upwndPwrf.level, label="PWRF")
-ax5.semilogy(upwndSnd.wspeed[iwnd], upwndSnd.lev[iwnd], label="Radiosonde")
-ax5.semilogy(upwnd_era_windspeed, upwndEra.P, label="ERA5")
+try:
+    upwnd_era_windspeed = np.sqrt(upwndEra.uwind**2 + upwndEra.vwind**2)
+    iwnd = np.where(~np.isnan(upwndSnd.wspeed))[0]
+    ax5.semilogy(upwndPwrf.wind, upwndPwrf.level, label="PWRF")
+    ax5.semilogy(upwndSnd.wspeed[iwnd], upwndSnd.lev[iwnd], label="Radiosonde")
+    ax5.semilogy(upwnd_era_windspeed, upwndEra.P, label="ERA5")
+except:
+    pass
 # TODO: did not get ERA5 wind speed
 # ax5.semilogy(upwndEra.rh, upwndEra.P, label="ERA5")
 ax5.set_ylim([1000, 100])
@@ -348,10 +351,13 @@ ax4.set_xlabel("RH (%)")
 ax4.text(5, 850, "e")
 ax4.set_xlim([0, 120])
 
-mbio_era_windspeed = np.sqrt(mbioEra.uwind**2 + mbioEra.vwind**2)
-ax6.semilogy(mbioPwrf.wind, mbioPwrf.level, label="PWRF")
-ax6.semilogy(mbioSnd.wspeed, mbioSnd.lev, label="Radiosonde")
-ax6.semilogy(mbio_era_windspeed, mbioEra.P, label="ERA5")
+try:
+    mbio_era_windspeed = np.sqrt(mbioEra.uwind**2 + mbioEra.vwind**2)
+    ax6.semilogy(mbioPwrf.wind, mbioPwrf.level, label="PWRF")
+    ax6.semilogy(mbioSnd.wspeed, mbioSnd.lev, label="Radiosonde")
+    ax6.semilogy(mbio_era_windspeed, mbioEra.P, label="ERA5")
+except:
+    pass
 ax6.set_ylim([1000, 100])
 ax6.set_xlabel("Wind speed (m/s)")
 ax6.text(1.5, 800, "f")
