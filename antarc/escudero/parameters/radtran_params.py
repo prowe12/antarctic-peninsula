@@ -6,10 +6,16 @@
 #       cloud layer 1, then cloud layer 2, etc, up to NCLDLYR
 
 
+from antarc import params
+
+MEAS_DIR = params.MEAS_DIR
+PROJ_DIR = params.PROJECT_DIR
+
+
 lblrtm_dir = "/Users/prowe/git-repos/LBLRTM/run"
 run_lblrtm = "lblrtm"
-prof_dir = "/Users/prowe/Sync/measurements/Escudero/profiles/"
-od_dir = "/Users/prowe/Sync/measurements/Escudero/od/"
+prof_dir = MEAS_DIR + "Escudero/profiles/"
+od_dir = MEAS_DIR + "Escudero/od/"
 pmomfiles_liq = "/Users/prowe/git-repos/clarra/sampleRun/single_scattering/pmom_water_T273_RFN_S331_trunc.nc"
 pmomfiles_ice = "/Users/prowe/git-repos/clarra/sampleRun/single_scattering/pmom_ice_sphere_T266_Warren_S331_trunc.nc"
 solarSourceFunFile = "/Users/prowe/git-repos/clarra/sampleRun/kurucz.dat"
