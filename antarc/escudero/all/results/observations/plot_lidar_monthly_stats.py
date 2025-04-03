@@ -24,14 +24,13 @@ from antarc.escudero.all.results.params import SAVEFIGS, SAVEDIR
 
 # Directories
 meas_dir = MEAS_DIR + "/Escudero/mpl/"
-
+lidar_dir = meas_dir + "reprocessing_stillwell/v3/"
 
 # Params
-lidar_dir = meas_dir + "reprocessing_stillwell/v3/"
 datestring = "20220516"
 fname = f"KGI_MPLData_{datestring}.cdf"
-titlestr = "King George Island MPL Data Processed " + datestring
 fmt = "KGI_MPLData_%Y%m%d.cdf"
+titlestr = "King George Island MPL Data Processed " + datestring
 nmin_day = 24 * 60
 
 
