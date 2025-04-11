@@ -5,7 +5,7 @@ A codebase for analyzing measurements made on the Antarctic Peninsula.
 
 
 ## Publications that use this code:
-* Rowe et al. 2025, Observations of Clouds and Radiation Over King George Island and Implications for the Southern Ocean and Antarctica, J. Geophys. Res. Atmos., 2025.
+* Rowe et al. 2025, Comparison of Cloud and Radiation Measurements to Models over the Southern Ocean at Escudero Station, King George Island, J. Geophys. Res. Atmos., 2025.
 
 ## Authors
   - Penny Rowe (https://github.com/prowe12)
