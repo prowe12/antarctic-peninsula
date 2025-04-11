@@ -12,7 +12,7 @@ from antarc import params
 # Directories
 MEAS_DIR = params.MEAS_DIR
 LWD_DIR = MEAS_DIR + "Escudero/pyrgeometer/stand/"
-LWD_CLEAR_DIR = MEAS_DIR + "measurements/Escudero/lwd_clear/"
+LWD_CLEAR_DIR = MEAS_DIR + "Escudero/lwd_clear/"
 
 # Files and formats
 LWD_FILEFORMAT = "esc_lwd%Y%m%d_%H%M.csv"
