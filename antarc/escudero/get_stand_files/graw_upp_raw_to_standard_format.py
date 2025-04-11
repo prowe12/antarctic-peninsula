@@ -12,6 +12,8 @@ Get the sounding data and save it to a common format, with no QC
 import numpy as np
 import os
 from time import strptime, strftime
+import datetime as dt
+
 
 # My parameters and modules
 import antarc.params
@@ -285,8 +287,6 @@ def graw_to_std_fmt(
         # ymd = datestr[:4] + "-" + datestr[4:6] + "-" + datestr[6:8]
 
         # Get datetime
-        import datetime as dt
-
         dtime0 = dt.datetime.strptime(datestr, "%Y%m%d")
         dtime = [dtime0 + dt.timedelta(seconds=x) for x in met[:, 0]]
 
@@ -361,7 +361,7 @@ PREFIX = "esc_sonde_v0"
 # Run the code to convert from the GRAW format to the data denial format
 # sampfile = sonde_params.SAMPLEFNAME
 SAMPFILE = "20220401120020047677_UPP_RAW_89056_2022040112.txt"
-for indir in ORIG_DIRS:
+for indir in ORIG_DIRS[1:2]:
     slash = indir[: indir.rfind("/")].rfind("/")
     graw_to_std_fmt(indir, OUTDIR, SAMPFILE, PREFIX, LAT, LON, HEIGHT)
 

@@ -276,7 +276,8 @@ meas_dir = params.MEAS_DIR
 
 # Directories and variables needed from other param files
 lwd_base_dir = lwd_params.LWD_DIR
-era_dir = f"{params.MEAS_DIR}Escudero/era5/broadband/"
+swd_base_dir = swd_params.SWD_DIR
+era_dir = meas_dir + "/Escudero/era5/broadband/"
 lwd_fmt = lwd_params.LWD_FILEFORMAT
 swd_fmt = swd_params.SWD_FILEFORMAT
 lat = esc_params.LATITUDE
@@ -322,8 +323,7 @@ for year in [2018, 2019, 2020, 2021, 2022, 2023]:
 
 # Load in the Escudero broadband measurements (slow!)
 lwd_date, lwd = get_lwd_qc(lwd_base_dir, lwd_fmt, date1, date2)
-swd_date, swd = get_swd_qc(swd_params.SWD_DIR, swd_fmt, date1, date2)
-
+swd_date, swd = get_swd_qc(swd_base_dir, swd_fmt, date1, date2)
 
 # ColumnType:
 #   float32 ColumnType(Time)

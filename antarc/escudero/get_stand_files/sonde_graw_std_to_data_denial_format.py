@@ -332,7 +332,6 @@ def qc_graw_std(
     firstdatestr = "notset"
 
     for input_file in input_files:
-        # input_file = input_files[0]
 
         # Radiosonde Data
         df = pd.read_csv(input_dir + input_file, na_values="nan")
@@ -349,16 +348,9 @@ def qc_graw_std(
         rhw = df["RH(%)"].to_numpy().astype(float)
         dewpt = df["Dewp(C)"].to_numpy().astype(float)
 
-        try:
-            dtime = np.array(
-                [
-                    dt.datetime.strptime(x, "%Y-%m-%d_%H:%M:%S")
-                    for x in df["Date"]
-                ]
-            )
-
-        except:
-            print("pause here")
+        dtime = np.array(
+            [dt.datetime.strptime(x, "%Y-%m-%d_%H:%M:%S") for x in df["Date"]]
+        )
 
         genmsg = f"{input_file}"
 
@@ -483,8 +475,6 @@ def qc_graw_std(
         iznan = np.where(np.isnan(met[:, ialt].astype(float)))[0]
         ipnan = np.where(np.isnan(met[:, ipress].astype(float)))[0]
         inan = np.intersect1d(iznan, ipnan)
-        if any(inan):
-            print("pause here")
 
         # Remove any levels with nan for pressure or alt
         inan = np.union1d(iznan, ipnan)
